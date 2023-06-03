@@ -1,0 +1,114 @@
+---
+title: "Team_Stat_Comparison"
+author: "Greg"
+date: "2023-05-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(toRvik)
+library(tidyr)
+library(tidyverse)
+library(bigballR)
+library(ncaahoopR)
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(dplyr)
+library(gtExtras)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
+```
+
+#inputs
+```{r}
+NCAA_team <- 'Massachusetts'#dict$NCAA
+save_name5 <- paste0(NCAA_team, ' Team Comp.png')
+```
+
+#get stats
+```{r}
+team_stats <- bart_team_box(year=2022)
+teams <- bart_teams(year=2022, conf = NULL)
+team_rating <- bart_ratings(year=2022)
+```
+
+#ratings
+```{r}
+opp_team_rating <- team_rating %>%
+  filter(team==NCAA_team) %>%
+  select(barthag_rk, adj_o_rk, adj_d_rk)
+UMass_team_rating <- team_rating %>%
+  filter(team=='Massachusetts' ) %>%
+  select(barthag_rk, adj_o_rk, adj_d_rk)
+```
+
+#four factors
+```{r}
+team_four_factors <- bart_factors(year=2022)
+opp_four_factors <- team_four_factors %>%
+  mutate(off_efg_rank = round(rank(desc(off_efg)),0),
+         off_to_rank = round(rank(desc(off_to)),0),
+         off_or_rank = round(rank(desc(off_or)),0),
+         off_ftr_rank = round(rank(desc(off_ftr)),0),
+         def_efg_rank = round(rank(desc(def_efg)),0),
+         def_to_rank = round(rank(desc(def_to)),0),
+         def_or_rank = round(rank(desc(def_or)),0),
+         def_ftr_rank = round(rank(desc(def_ftr)),0)) %>%
+  select(team, off_efg, off_efg_rank, off_to, off_to_rank, off_or, off_or_rank, off_ftr, off_ftr_rank, def_efg, def_efg_rank, def_to, def_to_rank, def_or, def_or_rank, def_ftr, def_ftr_rank) %>%
+  filter(team==NCAA_team)
+opp_four_factors[nrow(opp_four_factors)+1,] <- list("Offense", opp_four_factors$off_efg[1], opp_four_factors$off_efg_rank[1], opp_four_factors$off_to[1], opp_four_factors$off_to_rank[1], opp_four_factors$off_or[1], opp_four_factors$off_or_rank[1], opp_four_factors$off_ftr[1], opp_four_factors$off_ftr_rank[1],0,0,0,0,0,0,0,0)
+opp_four_factors[nrow(opp_four_factors)+1,] <- list("Defense", opp_four_factors$def_efg[1], opp_four_factors$def_efg_rank[1], opp_four_factors$def_to[1], opp_four_factors$def_to_rank[1], opp_four_factors$def_or[1], opp_four_factors$def_or_rank[1], opp_four_factors$def_ftr[1], opp_four_factors$def_ftr_rank[1],0,0,0,0,0,0,0,0)
+UMass_four_factors <- team_four_factors %>%
+  mutate(off_efg_rank = round(rank(desc(off_efg)),0),
+         off_to_rank = round(rank(desc(off_to)),0),
+         off_or_rank = round(rank(desc(off_or)),0),
+         off_ftr_rank = round(rank(desc(off_ftr)),0),
+         def_efg_rank = round(rank(desc(def_efg)),0),
+         def_to_rank = round(rank(desc(def_to)),0),
+         def_or_rank = round(rank(desc(def_or)),0),
+         def_ftr_rank = round(rank(desc(def_ftr)),0)) %>%
+  select(team, off_efg, off_efg_rank, off_to, off_to_rank, off_or, off_or_rank, off_ftr, off_ftr_rank, def_efg, def_efg_rank, def_to, def_to_rank, def_or, def_or_rank, def_ftr, def_ftr_rank) %>%
+  filter(team=='Massachusetts')
+UMass_four_factors[nrow(UMass_four_factors)+1,] <- list("Offense", UMass_four_factors$off_efg[1], UMass_four_factors$off_efg_rank[1], UMass_four_factors$off_to[1], UMass_four_factors$off_to_rank[1], UMass_four_factors$off_or[1], UMass_four_factors$off_or_rank[1], UMass_four_factors$off_ftr[1], UMass_four_factors$off_ftr_rank[1],0,0,0,0,0,0,0,0)
+UMass_four_factors[nrow(UMass_four_factors)+1,] <- list("Defense", UMass_four_factors$def_efg[1], UMass_four_factors$def_efg_rank[1], UMass_four_factors$def_to[1], UMass_four_factors$def_to_rank[1], UMass_four_factors$def_or[1], UMass_four_factors$def_or_rank[1], UMass_four_factors$def_ftr[1], UMass_four_factors$def_ftr_rank[1],0,0,0,0,0,0,0,0)
+```
+
+#fix
+```{r}
+opp_four_factors <- opp_four_factors %>%
+  slice(2:3) %>%
+  select(team, off_efg_rank, off_to_rank, off_or_rank, off_ftr_rank)
+UMass_four_factors <- UMass_four_factors %>%
+  slice(2:3) %>%
+  select(team, off_efg_rank, off_to_rank, off_or_rank, off_ftr_rank)
+```
+
+#mix
+```{r}
+full <- data.frame(stat=c("Rank", "Offense", "Defense", "Off eFG%", "Def eFG%", "Off TOV", "Def TOV", "Off OReb", "Def OReb", "Off FT", "Def FT"),
+                        UMass = c(UMass_team_rating$barthag_rk, UMass_team_rating$adj_o_rk, UMass_team_rating$adj_d_rk, UMass_four_factors$off_efg_rank[1], UMass_four_factors$off_efg_rank[2], UMass_four_factors$off_to_rank[1], UMass_four_factors$off_to_rank[2], UMass_four_factors$off_or_rank[1], UMass_four_factors$off_or_rank[2], UMass_four_factors$off_ftr_rank[1], UMass_four_factors$off_ftr_rank[2]),
+                        Opp = c(opp_team_rating$barthag_rk, opp_team_rating$adj_o_rk, opp_team_rating$adj_d_rk, opp_four_factors$off_efg_rank[1], opp_four_factors$off_efg_rank[2], opp_four_factors$off_to_rank[1], opp_four_factors$off_to_rank[2], opp_four_factors$off_or_rank[1], opp_four_factors$off_or_rank[2], opp_four_factors$off_ftr_rank[1], opp_four_factors$off_ftr_rank[2]))
+```
+
+#table
+```{r}
+Comp_table <- full %>%
+  gt() %>%
+  cols_label(stat = 'Stat', UMass = 'UMass', Opp = NCAA_team) %>%
+  tab_header(title = md('**Team Stats Comparison**')) %>%
+  data_color(columns = vars(UMass, Opp), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = -1) %>% as.character(), domain = c(358,0), na.color = "#00441BFF")) %>%
+  cols_align(align = 'left', columns = vars(stat)) %>%
+  cols_align(align = 'center', columns = vars(UMass, Opp)) %>%
+  cols_width(vars(stat, UMass, Opp) ~ px(125)) %>%
+  tab_options(column_labels.font.size = 20, heading.title.font.size = 30) %>%
+  opt_table_font(font = google_font('Times New Roman'), weight = 1) %>%
+  opt_row_striping() %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(save_name5)
+```
+

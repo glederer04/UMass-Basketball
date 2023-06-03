@@ -1,0 +1,74 @@
+---
+title: "Sports_Reference"
+author: "Greg"
+date: "2023-05-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(rvest)
+
+url3 <- paste0('https://www.sports-reference.com/cbb/seasons/men/', year, '-advanced-school-stats.html')
+webpage3 <- read_html(url3)
+all_team_advanced <- webpage3 %>%
+  html_table()
+all_team_advanced <- data.frame(all_team_advanced)
+
+all_team_advanced <- subset(all_team_advanced, select = -c(Var.1, Var.9, Var.12, Var.15, Var.18, Var.21))
+colnames(all_team_advanced) <- all_team_advanced[1,]
+all_team_advanced <- all_team_advanced[-1,]
+colnames(all_team_advanced)[8] = 'Conf_W'
+colnames(all_team_advanced)[9] = 'Conf_L'
+colnames(all_team_advanced)[10] = 'Home_W'
+colnames(all_team_advanced)[11] = 'Home_L'
+colnames(all_team_advanced)[12] = 'Away_W'
+colnames(all_team_advanced)[13] = 'Away_L'
+colnames(all_team_advanced)[14] = 'Tm_Pts'
+colnames(all_team_advanced)[15] = 'Opp_Pts'
+all_team_advanced <- all_team_advanced[-22,]
+all_team_advanced <- all_team_advanced[-21,]
+all_team_advanced <- all_team_advanced[-42,]
+all_team_advanced <- all_team_advanced[-41,]
+all_team_advanced <- all_team_advanced[-62,]
+all_team_advanced <- all_team_advanced[-61,]
+all_team_advanced <- all_team_advanced[-82,]
+all_team_advanced <- all_team_advanced[-81,]
+all_team_advanced <- all_team_advanced[-102,]
+all_team_advanced <- all_team_advanced[-101,]
+all_team_advanced <- all_team_advanced[-122,]
+all_team_advanced <- all_team_advanced[-121,]
+all_team_advanced <- all_team_advanced[-142,]
+all_team_advanced <- all_team_advanced[-141,]
+all_team_advanced <- all_team_advanced[-162,]
+all_team_advanced <- all_team_advanced[-161,]
+all_team_advanced <- all_team_advanced[-182,]
+all_team_advanced <- all_team_advanced[-181,]
+all_team_advanced <- all_team_advanced[-202,]
+all_team_advanced <- all_team_advanced[-201,]
+all_team_advanced <- all_team_advanced[-222,]
+all_team_advanced <- all_team_advanced[-221,]
+all_team_advanced <- all_team_advanced[-242,]
+all_team_advanced <- all_team_advanced[-241,]
+all_team_advanced <- all_team_advanced[-262,]
+all_team_advanced <- all_team_advanced[-261,]
+all_team_advanced <- all_team_advanced[-282,]
+all_team_advanced <- all_team_advanced[-281,]
+all_team_advanced <- all_team_advanced[-302,]
+all_team_advanced <- all_team_advanced[-301,]
+all_team_advanced <- all_team_advanced[-322,]
+all_team_advanced <- all_team_advanced[-321,]
+all_team_advanced <- all_team_advanced[-342,]
+all_team_advanced <- all_team_advanced[-341,]
+all_team_advanced <- all_team_advanced[-362,]
+all_team_advanced <- all_team_advanced[-361,]
+
+all_team_advanced$`TOV%` <- as.numeric(all_team_advanced$`TOV%`)
+all_team_advanced$`ORB%` <- as.numeric(all_team_advanced$`ORB%`)
+all_team_advanced$FTr <- as.numeric(all_team_advanced$FTr)
+all_team_advanced$ORtg <- as.numeric(all_team_advanced$ORtg)
+```
+

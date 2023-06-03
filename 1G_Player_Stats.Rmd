@@ -1,0 +1,280 @@
+---
+title: "1G_Player_Stats"
+author: "Greg"
+date: "2023-05-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(hoopR)
+library(bigballR)
+library(ncaahoopR)
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(dplyr)
+library(gtExtras)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
+```
+
+#inputs
+```{r}
+ncaa_game_id <- 5472625 #stats.ncaa.org play by play
+espn_team_a <- 'UMass' #dict$ESPN
+espn_team_h <- 'Richmond' #dict$ESPN
+day <- 'March 7th, 2023'
+save_name1 <- paste0(espn_team_a, ' Basic Stats vs. ', espn_team_h, '.png')
+save_name2 <- paste0(espn_team_h, ' Basic Stats vs. ', espn_team_a, '.png')
+save_name3 <- paste0(espn_team_a, ' Shooting Stats vs. ', espn_team_h, '.png')
+save_name4 <- paste0(espn_team_h, ' Shooting Stats vs. ', espn_team_a, '.png')
+save_name5 <- paste0(espn_team_a, ' Advanced Stats vs. ', espn_team_h, '.png')
+save_name6 <- paste0(espn_team_h, ' Advanced Stats vs. ', espn_team_a, '.png')
+subtitle <- paste0(day, ' | ', espn_team_a, ' vs. ', espn_team_h)
+full_player_stats <- read.csv("/Users/gregorylederer/Desktop/UMass Basketball/22-23 Player PBP Data.csv")
+```
+
+#games stats
+```{r}
+player_stats <- get_player_stats(get_play_by_play(ncaa_game_id), multi.games = F, simple = F)
+```
+
+#rosters
+```{r}
+away_roster <- ncaahoopR::get_roster(espn_team_a, season = '2022-23')
+away_roster <- away_roster %>%
+  mutate(Jersey = number) %>%
+  select(Jersey, player_image)
+away_roster <- merge(away_roster, get_team_roster(season = '2022-23', team.name = player_stats$Away[1]), by = 'Jersey')
+
+home_roster <- ncaahoopR::get_roster(espn_team_h, season = '2022-23')
+home_roster <- home_roster %>%
+  mutate(Jersey = number) %>%
+  select(Jersey, player_image)
+home_roster <- merge(home_roster, get_team_roster(season = '2022-23', team.name = player_stats$Home[1]), by = 'Jersey')
+```
+
+#basic stats
+```{r}
+away_basic <- player_stats %>%
+  filter(Away == Team) %>%
+  mutate(MINS = round(MINS,1),
+         REB = ORB+DRB,
+         FG = paste0(FGM, '/', FGA),
+         TP = paste0(TPM, '/', TPA),
+         FG. = round(FG.*100,1),
+         TP. = round(TP.*100,1)) %>%
+  select(Player, MINS, PTS, REB, AST, FG, FG., TP, TP., STL, BLK, TOV, PF, ORB, DRB)
+away_basic <- merge(away_basic, away_roster, by = 'Player')
+away_basic <- away_basic %>%
+  select(player_image, CleanName, MINS, PTS, REB, AST, FG, FG., TP, TP., STL, BLK, TOV, PF, ORB, DRB) %>%
+  arrange(desc(MINS))
+
+home_basic <- player_stats %>%
+  filter(Home == Team) %>%
+  mutate(MINS = round(MINS,1),
+         REB = ORB+DRB,
+         FG = paste0(FGM, '/', FGA),
+         TP = paste0(TPM, '/', TPA),
+         FG. = round(FG.*100,1),
+         TP. = round(TP.*100,1)) %>%
+  select(Player, MINS, PTS, REB, AST, FG, FG., TP, TP., STL, BLK, TOV, PF, ORB, DRB)
+home_basic <- merge(home_basic, home_roster, by = 'Player')
+home_basic <- home_basic %>%
+  select(player_image, CleanName, MINS, PTS, REB, AST, FG, FG., TP, TP., STL, BLK, TOV, PF, ORB, DRB) %>%
+  arrange(desc(MINS))
+```
+
+#shooting stats
+```{r}
+away_shooting <- player_stats %>%
+  filter(Away == Team, FGA > 0) %>%
+  mutate(TS. = round(TS.*100,1),
+         eFG. = round(eFG.*100,1),
+         RIM = paste0(RIMM, '/', RIMA),
+         RIM. = round(RIM.*100,1),
+         MID = paste0(MIDM, '/', MIDA),
+         MID. = round(MID.*100,1),
+         TP = paste0(TPM, '/', TPA),
+         TP. = round(TP.*100,1),
+         FT = paste0(FTM, '/', FTA),
+         FT. = round(FT.*100,1)) %>%
+  select(Player, PTS, TS., eFG., RIM, RIM., MID, MID., TP, TP., FT, FT.)
+away_shooting <- merge(away_shooting, away_roster, by = 'Player')
+away_shooting <- away_shooting %>%
+  select(player_image, CleanName, PTS, TS., eFG., RIM, RIM., MID, MID., TP, TP., FT, FT.) %>%
+  arrange(desc(PTS))
+
+home_shooting <- player_stats %>%
+  filter(Home == Team, FGA > 0) %>%
+  mutate(TS. = round(TS.*100,1),
+         eFG. = round(eFG.*100,1),
+         RIM = paste0(RIMM, '/', RIMA),
+         RIM. = round(RIM.*100,1),
+         MID = paste0(MIDM, '/', MIDA),
+         MID. = round(MID.*100,1),
+         TP = paste0(TPM, '/', TPA),
+         TP. = round(TP.*100,1),
+         FT = paste0(FTM, '/', FTA),
+         FT. = round(FT.*100,1)) %>%
+  select(Player, PTS, TS., eFG., RIM, RIM., MID, MID., TP, TP., FT, FT.)
+home_shooting <- merge(home_shooting, home_roster, by = 'Player')
+home_shooting <- home_shooting %>%
+  select(player_image, CleanName, PTS, TS., eFG., RIM, RIM., MID, MID., TP, TP., FT, FT.) %>%
+  arrange(desc(PTS))
+```
+
+#advanced stats
+```{r}
+away_advanced <- player_stats %>%
+  filter(Away == Team, FGA > 0) %>%
+  mutate(Pts_Created = PTS_unast,
+         Created_Prop = round(Pts_Created/PTS*100, 1),
+         Pts_Added = round((((RIM.-mean(full_player_stats$RIM.[full_player_stats$RIMA>=20]))*RIMA + (MID.-mean(full_player_stats$MID.[full_player_stats$MIDA>=20]))*MIDA + (TP.-mean(full_player_stats$TP.[full_player_stats$TPA>=20]))*TPA) + (FT.-mean(full_player_stats$FT.[full_player_stats$FTA>=20]))*FTA),1),
+         SQ = round((mean(full_player_stats$RIM.[full_player_stats$RIMA>=20])*RIMA/FGA + mean(full_player_stats$MID.[full_player_stats$MIDA>=20])*MIDA/FGA + mean(full_player_stats$TP.[full_player_stats$TPA>=20])*TPA/FGA*1.5)*100,1),
+         Shot_Making = round((eFG.*100-SQ),1),
+         Trans_Prop = round(PTS_trans/PTS*100,1),
+         HC_Prop = round(PTS_half/PTS*100,1)) %>%
+  select(Player, Pts_Added, Pts_Created, Created_Prop, SQ, Shot_Making, PTS_trans, Trans_Prop, PTS_half, HC_Prop)
+away_advanced[is.na(away_advanced)] = 0.0
+away_advanced <- merge(away_advanced, away_roster, by="Player")
+away_advanced <- away_advanced %>%
+  select(player_image, CleanName, Pts_Added, Pts_Created, Created_Prop, SQ, Shot_Making,  PTS_trans, Trans_Prop, PTS_half, HC_Prop) %>%
+  arrange(desc(Pts_Added))
+
+home_advanced <- player_stats %>%
+  filter(Home == Team, FGA > 0) %>%
+  mutate(Pts_Created = PTS_unast,
+         Created_Prop = round(Pts_Created/PTS*100, 1),
+         Pts_Added = round((((RIM.-mean(full_player_stats$RIM.[full_player_stats$RIMA>=20]))*RIMA + (MID.-mean(full_player_stats$MID.[full_player_stats$MIDA>=20]))*MIDA + (TP.-mean(full_player_stats$TP.[full_player_stats$TPA>=20]))*TPA) + (FT.-mean(full_player_stats$FT.[full_player_stats$FTA>=20]))*FTA),1),
+         SQ = round((mean(full_player_stats$RIM.[full_player_stats$RIMA>=20])*RIMA/FGA + mean(full_player_stats$MID.[full_player_stats$MIDA>=20])*MIDA/FGA + mean(full_player_stats$TP.[full_player_stats$TPA>=20])*TPA/FGA*1.5)*100,1),
+         Shot_Making = round((eFG.*100-SQ),1),
+         Trans_Prop = round(PTS_trans/PTS*100,1),
+         HC_Prop = round(PTS_half/PTS*100,1)) %>%
+  select(Player, Pts_Added, Pts_Created, Created_Prop, SQ, Shot_Making, PTS_trans, Trans_Prop, PTS_half, HC_Prop)
+home_advanced[is.na(home_advanced)] = 0.0
+home_advanced <- merge(home_advanced, home_roster, by="Player")
+home_advanced <- home_advanced %>%
+  select(player_image, CleanName, Pts_Added, Pts_Created, Created_Prop, SQ, Shot_Making,  PTS_trans, Trans_Prop, PTS_half, HC_Prop) %>%
+  arrange(desc(Pts_Added))
+```
+
+#basic tables
+```{r}
+away_basic_table <- away_basic %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), MINS = md('**Mins**'), PTS = md('**Pts**'), REB = md('**Reb**'), AST = md('**Ast**'), FG = md('**FG**'), FG. = md('**FG%**'), TP = md('**3pt**'), TP. = md('**3pt%**'), STL = md('**Stl**'), BLK = md('**Blk**'), TOV = md('**Tov**'), PF = md('**PF**'), ORB = md('**OReb**'), DRB = md('**DReb**')) %>%
+  tab_header(title = paste0(player_stats$Away[1], ' Basic Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(PTS), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TP.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(FG.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gt_add_divider(AST) %>%
+  gt_add_divider(TP.) %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gtsave(save_name1)
+
+home_basic_table <- home_basic %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), MINS = md('**Mins**'), PTS = md('**Pts**'), REB = md('**Reb**'), AST = md('**Ast**'), FG = md('**FG**'), FG. = md('**FG%**'), TP = md('**3pt**'), TP. = md('**3pt%**'), STL = md('**Stl**'), BLK = md('**Blk**'), TOV = md('**Tov**'), PF = md('**PF**'), ORB = md('**OReb**'), DRB = md('**DReb**')) %>%
+  tab_header(title = paste0(player_stats$Home[1], ' Basic Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(PTS), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TP.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(FG.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gt_add_divider(AST) %>%
+  gt_add_divider(TP.) %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gtsave(save_name2)
+```
+
+#shooting tables
+```{r}
+away_shooting_table <- away_shooting %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), PTS = md('**Pts**'), TS. = md('**TS%**'), eFG. = md('**eFG%**'), RIM = md('**Rim**'), RIM. = md('**Rim%**'), MID = md('**MID**'), MID. = md('**Mid%**'), TP = md('**3pt**'), TP. = md('**3pt%**'), FT = md('**FT**'), FT. = md('**FT%**')) %>%
+  tab_header(title = paste0(player_stats$Away[1], ' Shooting Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(PTS), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TS.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(eFG.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(RIM.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(MID.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TP.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(FT.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gt_add_divider(eFG.) %>%
+  gt_add_divider(RIM.) %>%
+  gt_add_divider(MID.) %>%
+  gt_add_divider(TP.) %>%
+  gtsave(save_name3)
+
+away_shooting_table <- away_shooting %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), PTS = md('**Pts**'), TS. = md('**TS%**'), eFG. = md('**eFG%**'), RIM = md('**Rim**'), RIM. = md('**Rim%**'), MID = md('**MID**'), MID. = md('**Mid%**'), TP = md('**3pt**'), TP. = md('**3pt%**'), FT = md('**FT**'), FT. = md('**FT%**')) %>%
+  tab_header(title = paste0(player_stats$Away[1], ' Shooting Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(PTS), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TS.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(eFG.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(RIM.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(MID.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TP.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(FT.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gt_add_divider(eFG.) %>%
+  gt_add_divider(RIM.) %>%
+  gt_add_divider(MID.) %>%
+  gt_add_divider(TP.) %>%
+  gtsave(save_name4)
+```
+
+#advanced table
+```{r}
+away_advanced_table <- away_advanced %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), Pts_Added = md('**Points Added**'), Pts_Created = md('**Created Pts**'), Created_Prop = md('**% of Pts Created**'), SQ = md('**Shot Quality**'), Shot_Making = md('**Shot Making**'), PTS_trans = md('**Transition Pts**'), Trans_Prop = md('**% of Pts in Transition**'), PTS_half = md('**Halfcourt Pts**'), HC_Prop = md('**% of Pts in HC**')) %>%
+  tab_header(title = paste0(player_stats$Away[1], ' Advanced Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(Pts_Created), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Shot_Making), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Pts_Added), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gt_add_divider(Shot_Making) %>%
+  gt_add_divider(Trans_Prop) %>%
+  gt_add_divider(Created_Prop) %>%
+  gt_add_divider(Pts_Added) %>%
+  gtsave(save_name5)
+
+home_advanced_table <- home_advanced %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), Pts_Added = md('**Points Added**'), Pts_Created = md('**Created Pts**'), Created_Prop = md('**% of Pts Created**'), SQ = md('**Shot Quality**'), Shot_Making = md('**Shot Making**'), PTS_trans = md('**Transition Pts**'), Trans_Prop = md('**% of Pts in Transition**'), PTS_half = md('**Halfcourt Pts**'), HC_Prop = md('**% of Pts in HC**')) %>%
+  tab_header(title = paste0(player_stats$Home[1], ' Advanced Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(Pts_Created), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Shot_Making), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Pts_Added), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gt_add_divider(Shot_Making) %>%
+  gt_add_divider(Trans_Prop) %>%
+  gt_add_divider(Created_Prop) %>%
+  gt_add_divider(Pts_Added) %>%
+  gtsave(save_name6)
+```
+

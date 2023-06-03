@@ -1,0 +1,310 @@
+---
+title: "1G_Team_Profiles"
+author: "Greg"
+date: "2023-05-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(hoopR)
+library(toRvik)
+library(bigballR)
+library(ncaahoopR)
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(gtExtras)
+library(dplyr)
+library(rvest)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
+```
+
+#inputs
+```{r}
+espn_game_id <- 401514221 #espn.com
+ncaa_game_id <- 5472625 #stats.ncaa.org | play by play
+ESPN_Away <- 'UMass' #dict$ESPN
+ESPN_Home <- 'Richmond' #dict$ESPN
+NCAA_Away <- 'Massachusetts' #dict$NCAA
+NCAA_Home <- 'Richmond' #dict$NCAA
+save_name1 <- paste0(ESPN_Away, ' vs. ', ESPN_Home, ' General Stats.png')
+save_name2 <- paste0(ESPN_Away, ' vs. ', ESPN_Home, ' Overview & Four Factors.png')
+save_name3 <- paste0(ESPN_Away, ' vs. ', ESPN_Home, ' Shooting Percentages.png')
+save_name4 <- paste0(ESPN_Away, ' vs. ', ESPN_Home, ' Shot Locations.png')
+save_name5 <- paste0(ESPN_Away, ' vs. ', ESPN_Home, ' Game Flow.png')
+save_name6 <- paste0(ESPN_Away, ' vs. ', ESPN_Home, ' Win Probability.png')
+full_player_stats <- read.csv('/Users/gregorylederer/Desktop/Umass Basketball/22-23 Player PBP Data.csv')
+total_data <- read.csv('/Users/gregorylederer/Desktop/Umass Basketball/22-23 Team PBP Data.csv')
+```
+
+#ORtg and DRtg
+```{r}
+rtgs <- bart_factors(year = 2022)
+
+rtgs_a <- rtgs %>%
+  filter(team == NCAA_Away)
+away_off <- rtgs_a$adj_o
+away_def <- rtgs_a$adj_d
+
+rtgs_h <- rtgs %>%
+  filter(team == NCAA_Home)
+home_off <- rtgs_a$adj_o
+home_def <- rtgs_a$adj_d
+
+url3 <- paste0('https://www.sports-reference.com/cbb/seasons/men/', '2023', '-advanced-school-stats.html')
+webpage3 <- read_html(url3)
+all_team_advanced <- webpage3 %>%
+  html_table()
+all_team_advanced <- data.frame(all_team_advanced)
+
+all_team_advanced <- subset(all_team_advanced, select = -c(Var.1, Var.9, Var.12, Var.15, Var.18, Var.21))
+colnames(all_team_advanced) <- all_team_advanced[1,]
+all_team_advanced <- all_team_advanced[-1,]
+colnames(all_team_advanced)[8] = 'Conf_W'
+colnames(all_team_advanced)[9] = 'Conf_L'
+colnames(all_team_advanced)[10] = 'Home_W'
+colnames(all_team_advanced)[11] = 'Home_L'
+colnames(all_team_advanced)[12] = 'Away_W'
+colnames(all_team_advanced)[13] = 'Away_L'
+colnames(all_team_advanced)[14] = 'Tm_Pts'
+colnames(all_team_advanced)[15] = 'Opp_Pts'
+all_team_advanced <- all_team_advanced[-22,]
+all_team_advanced <- all_team_advanced[-21,]
+all_team_advanced <- all_team_advanced[-42,]
+all_team_advanced <- all_team_advanced[-41,]
+all_team_advanced <- all_team_advanced[-62,]
+all_team_advanced <- all_team_advanced[-61,]
+all_team_advanced <- all_team_advanced[-82,]
+all_team_advanced <- all_team_advanced[-81,]
+all_team_advanced <- all_team_advanced[-102,]
+all_team_advanced <- all_team_advanced[-101,]
+all_team_advanced <- all_team_advanced[-122,]
+all_team_advanced <- all_team_advanced[-121,]
+all_team_advanced <- all_team_advanced[-142,]
+all_team_advanced <- all_team_advanced[-141,]
+all_team_advanced <- all_team_advanced[-162,]
+all_team_advanced <- all_team_advanced[-161,]
+all_team_advanced <- all_team_advanced[-182,]
+all_team_advanced <- all_team_advanced[-181,]
+all_team_advanced <- all_team_advanced[-202,]
+all_team_advanced <- all_team_advanced[-201,]
+all_team_advanced <- all_team_advanced[-222,]
+all_team_advanced <- all_team_advanced[-221,]
+all_team_advanced <- all_team_advanced[-242,]
+all_team_advanced <- all_team_advanced[-241,]
+all_team_advanced <- all_team_advanced[-262,]
+all_team_advanced <- all_team_advanced[-261,]
+all_team_advanced <- all_team_advanced[-282,]
+all_team_advanced <- all_team_advanced[-281,]
+all_team_advanced <- all_team_advanced[-302,]
+all_team_advanced <- all_team_advanced[-301,]
+all_team_advanced <- all_team_advanced[-322,]
+all_team_advanced <- all_team_advanced[-321,]
+all_team_advanced <- all_team_advanced[-342,]
+all_team_advanced <- all_team_advanced[-341,]
+all_team_advanced <- all_team_advanced[-362,]
+all_team_advanced <- all_team_advanced[-361,]
+
+all_team_advanced$`TOV%` <- as.numeric(all_team_advanced$`TOV%`)
+all_team_advanced$`ORB%` <- as.numeric(all_team_advanced$`ORB%`)
+all_team_advanced$FTr <- as.numeric(all_team_advanced$FTr)
+all_team_advanced$ORtg <- as.numeric(all_team_advanced$ORtg)
+
+avg <- mean(all_team_advanced$ORtg)
+
+away_off <- round(away_off,1)
+away_def <- round(away_def,1)
+home_off <- round(home_off,1)
+home_def <- round(home_def,1)
+avg <- round(avg,1)
+```
+
+#color and image
+```{r}
+colors_a <- ncaa_colors %>%
+  filter(ncaa_name == NCAA_Away)
+away_color <- colors_a$primary_color
+away_team_url <- colors_a$logo_url
+
+colors_h <- ncaa_colors %>%
+  filter(ncaa_name == NCAA_Home)
+home_color <- colors_h$primary_color
+home_team_url <- colors_h$logo_url
+
+url <- c(away_team_url, home_team_url)
+```
+
+#stats and roster
+```{r}
+player_stats <- get_player_stats(play_by_play_data = get_play_by_play(ncaa_game_id), multi.games = F, simple = F)
+
+away_roster <- ncaahoopR::get_roster(ESPN_Away, season = '2022-23')
+away_roster <- away_roster %>%
+  mutate(Jersey = number) %>%
+  select(Jersey, player_image)
+away_roster <- merge(away_roster, get_team_roster(season = '2022-23', team.name = player_stats$Away[1]), by = 'Jersey')
+
+home_roster <- ncaahoopR::get_roster(ESPN_Home, season = '2022-23')
+home_roster <- home_roster %>%
+  mutate(Jersey = number) %>%
+  select(Jersey, player_image)
+home_roster <- merge(home_roster, get_team_roster(season = '2022-23', team.name = player_stats$Home[1]), by = 'Jersey')
+
+team_stats <- get_team_stats(play_by_play_data = get_play_by_play(ncaa_game_id), include_transition = T)
+```
+
+#team stats
+```{r}
+team_stats <- team_stats %>%
+  mutate(TP. = TPM/TPA)
+
+team_stats <- team_stats %>%
+  mutate(off_rtg_perc = round(pnorm((ORTG-mean(total_data$ORTG))/sd(total_data$ORTG)),2),
+         efg_perc = round(pnorm((eFG.-mean(total_data$eFG.))/sd(total_data$eFG.)),2),
+         tov_perc = round(pnorm((TOrate-mean(total_data$TOrate))/sd(total_data$TOrate)),2),
+         OReb_perc = round(pnorm((ORB.-mean(total_data$ORB.))/sd(total_data$ORB.)),2),
+         FTR_perc = round(pnorm((FTrate-mean(total_data$FTrate))/sd(total_data$FTrate)),2),
+         layup_perc = round(pnorm((RIMrate-mean(total_data$RIMrate))/sd(total_data$RIMrate)),2),
+         jumper_perc = round(pnorm((MIDrate-mean(total_data$MIDrate))/sd(total_data$MIDrate)),2),
+         three_pointer_perc = round(pnorm((TPrate-mean(total_data$TPrate))/sd(total_data$TPrate)),2),
+         layup_per_perc = round(pnorm((RIM.-mean(total_data$RIM.))/sd(total_data$RIM.)),2),
+         jumper_per_perc = round(pnorm((MID.-mean(total_data$MID.))/sd(total_data$MID.)),2),
+         three_pointer_per_perc = round(pnorm((TP.-mean(total_data$TPP))/sd(total_data$TPP)),2),
+         score = PTS,
+         poss = oPOSS,
+         off_rtg = round(ORTG,1),
+         halfcourt = (1-oTransPCT),
+         halfcourt_rtg = round(ORTG_half,1),
+         trans = oTransPCT,
+         trans_rtg = round(ORTG_trans,1),
+         team = Team,
+         efg = round(eFG.*100,1),
+         tov = round(TO/oPOSS*100,1),
+         OReb = round(ORB.*100,1),
+         FTR = round(FTrate*100,1),
+         layup_tot = paste0(RIMM, "/", RIMA),
+         layup_per = round(RIM.*100,1),
+         jumper_tot = paste0(FGM-RIMM-TPM, "/", FGA-RIMA-TPA),
+         jumper_per = (round((FGM-RIMM-TPM)/(FGA-RIMA-TPA)*100,1)),
+         three_pointer_tot = paste0(TPM,"/",TPA),
+         three_pointer_per = round(TPM/TPA*100,1),
+         layup = round(RIMrate*100,1),
+         jumper = round(MIDrate*100,1),
+         three_pointer = round(TPrate*100,1),
+         team = Team,
+         url=url)
+```
+
+#split them up
+```{r}
+overview <- team_stats %>%
+  select(url, team, score, poss, off_rtg, off_rtg_perc, halfcourt, halfcourt_rtg, trans, trans_rtg)
+overview <- overview[,-1:-3]
+
+general <- team_stats %>%
+  select(url, team, efg, efg_perc, tov, tov_perc, OReb, OReb_perc, FTR, FTR_perc)
+general <- general[,-1:-3]
+
+shot_per <- team_stats %>%
+  select(url, team, layup_tot, layup_per, layup_per_perc, jumper_tot, jumper_per, jumper_per_perc, three_pointer_tot, three_pointer_per, three_pointer_per_perc)
+shot_per <- shot_per[,-1:-3]
+
+shot_loc <- team_stats %>%
+  select(url, team, layup, layup_perc, jumper, jumper_perc, three_pointer, three_pointer_perc)
+shot_loc <- shot_loc[,-1:-3]
+```
+
+#overview table
+```{r}
+overview_table <- overview %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(url = '', team = '', score = md('**Score**'), poss = md('**Possessions**'), off_rtg = md('**Rtg.**'), off_rtg_perc = md('**%ile**'), halfcourt = md('**%**'), halfcourt_rtg = md('**Rtg.**'), trans = md('**%**'), trans_rtg = md('**Rtg.**')) %>%
+  tab_header(title = md('**General**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_spanner(label = 'Total', columns = vars(poss, off_rtg, off_rtg_perc)) %>%
+  tab_spanner(label = 'Halfcourt', columns = vars(halfcourt, halfcourt_rtg)) %>%
+  tab_spanner(label = 'Transition', columns = vars(trans, trans_rtg)) %>%
+  fmt_percent(columns = vars(off_rtg_perc, halfcourt, trans), decimals = 0) %>%
+  data_color(columns = vars(off_rtg_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(0,1), na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gt_add_divider(off_rtg_perc) %>%
+  gt_add_divider(halfcourt_rtg) %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gtsave(save_name1)
+```
+
+#general table
+```{r}
+general_table <- general %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(url = '', team = '', efg = '', efg_perc = '', tov = '', tov_perc = '', OReb = '', OReb_perc = '', FTR = '', FTR_perc = '') %>%
+  tab_header(title = md('**Overview & Four Factors**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_spanner(label = 'eFG%', columns = vars(efg, efg_perc)) %>%
+  tab_spanner(label = 'TOV%', columns = vars(tov, tov_perc)) %>%
+  tab_spanner(label = 'OReb%', columns = vars(OReb, OReb_perc)) %>%
+  tab_spanner(label = 'FTr', columns = vars(FTR, FTR_perc)) %>%
+  fmt_percent(columns = vars(efg_perc, tov_perc, OReb_perc, FTR_perc), decimals = 0) %>%
+  data_color(columns = vars(efg_perc, tov_perc, OReb_perc, FTR_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(0,1), na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gt_add_divider(efg_perc) %>%
+  gt_add_divider(tov_perc) %>%
+  gt_add_divider(OReb_perc) %>%
+  gtsave(save_name2)
+```
+
+#shot per table
+```{r}
+shot_per_table <- shot_per %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(url = '', team = '', layup_tot = '', layup_per = '', layup_per_perc = '', jumper_tot = '', jumper_per = '', jumper_per_perc = '', three_pointer_tot = '', three_pointer_per = '', three_pointer_per_perc = '') %>%
+  tab_header(title = md('**Shooting Percentages**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_spanner(label = 'Layups', columns = vars(layup_tot, layup_per, layup_per_perc)) %>%
+  tab_spanner(label = 'Midrange', columns = vars(jumper_tot, jumper_per, jumper_per_perc)) %>%
+  tab_spanner(label = '3-Pointers', columns = vars(three_pointer_tot, three_pointer_per, three_pointer_per_perc)) %>%
+  fmt_percent(columns = vars(layup_per_perc, jumper_per_perc, three_pointer_per_perc), decimals = 0) %>%
+  data_color(columns = vars(layup_per_perc, jumper_per_perc, three_pointer_per_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(0,1), na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gt_add_divider(layup_per_perc) %>%
+  gt_add_divider(jumper_per_perc) %>%
+  gt_add_divider(three_pointer_per_perc) %>%
+  gtsave(save_name3)
+```
+
+#shot loc table
+```{r}
+shot_loc_table <- shot_loc %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(url = '', team = '', layup = '', layup_perc = '', jumper = '', jumper_perc = '', three_pointer = '', three_pointer_perc = '') %>%
+  tab_header(title = md('**Shot Locations**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_spanner(label = 'Layups', columns = vars(layup, layup_perc)) %>%
+  tab_spanner(label = 'Midrange', columns = vars(jumper, jumper_perc)) %>%
+  tab_spanner(label = '3-Pointers', columns = vars(three_pointer, three_pointer_perc)) %>%
+  fmt_percent(columns = vars(layup_perc, jumper_perc, three_pointer_perc), decimals = 0) %>%
+  data_color(columns = vars(layup_perc, jumper_perc, three_pointer_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(0,1), na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gt_add_divider(layup_perc) %>%
+  gt_add_divider(jumper_perc) %>%
+  gtsave(save_name4)
+```
+
+#game flow & win prob (put lower on master post game)
+```{r}
+ggsave(filename = save_name5, plot = ncaahoopR::game_flow(espn_game_id, home_color, away_color), width = 7, height = 5, dpi = 300, limitsize = F)
+ggsave(filename = save_name6, plot = ncaahoopR::wp_chart_new(espn_game_id, home_color, away_color, include_spread = T, show_labels = T), width = 7, height = 5, dpi = 300, limitsize = F)
+```
+

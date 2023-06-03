@@ -1,0 +1,512 @@
+---
+title: "Wins/Losses"
+author: "Greg"
+date: "2023-05-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(bigballR)
+library(hoopR)
+library(ncaahoopR)
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(dplyr)
+library(rvest)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
+```
+
+#input
+```{r}
+NCAA_team <- 'Massachusetts'#dict$NCAA
+year <- '2023'
+save_name12 <- paste0(NCAA_team, ' WL Offense Overview.png')
+save_name13 <- paste0(NCAA_team, ' WL Offense General.png')
+save_name14 <- paste0(NCAA_team, ' WL Offense Shot Location.png')
+save_name15 <- paste0(NCAA_team, ' WL Offense Shot Percentage.png')
+save_name16 <- paste0(NCAA_team, ' WL Deffense Overview.png')
+save_name17 <- paste0(NCAA_team, ' WL Defense General.png')
+save_name18 <- paste0(NCAA_team, ' WL Defense Shot Location.png')
+save_name19 <- paste0(NCAA_team, ' WL Defense Shot Percentage.png')
+```
+
+#columns
+```{r}
+wins <- c()
+losses <- c()
+schedule <- get_team_schedule(season = '2022-23', team.name = NCAA_team)
+for (i in 1:length(schedule)) {
+  if((schedule$Home[i] == NCAA_team && (schedule$Home_Score[i] > schedule$Away_Score[i])) || (schedule$Away[i] == NCAA_team && (schedule$Away_Score[i] > schedule$Home_Score[i]))) {wins<-c(wins,i)}
+  else if ((schedule$Home[i] == NCAA_team && (schedule$Home_Score[i] < schedule$Away_Score[i])) ||  (schedule$Away[i] == NCAA_team && (schedule$Away_Score[i] < schedule$Home_Score[i]))) {losses<-c(losses,i)}
+}
+wins <- c(schedule$Game_ID[wins])
+losses <- c(schedule$Game_ID[losses])
+```
+
+#get stats
+```{r}
+L_stats <- get_team_stats(play_by_play_data = get_play_by_play(game_ids = losses), include_transition = T)
+W_stats <- get_team_stats(play_by_play_data = get_play_by_play(game_ids = wins), include_transition = T)
+```
+
+#hoopmath
+```{r}
+webpage5 <- readLines('https://hoop-math.com/leader_o2023.php')
+webpage5 <- data.frame(webpage5)
+webpage5 <- webpage5[-c(5559:5571),]
+webpage5 <- data.frame(webpage5)
+webpage5 <- webpage5[-c(0:99),]
+
+pattern <- '<th><p align=\"center\">([^<]*)</p></th>'
+datalines <- grep(pattern, webpage5, value = TRUE)
+getexpr <- function(s,g)substring(s,g,g+attr(g,'match.length')-1)
+gg <- gregexpr(pattern,datalines)
+matches <- mapply(getexpr,datalines,gg)
+result <- gsub(pattern,'\\1',matches)
+names(result) <- NULL
+result[1:14]
+hm1 <- as.data.frame(matrix(result,ncol=14,byrow=TRUE))
+names(hm1) = c('Team', 'eFG%', '% shots at rim', 'FG% at rim', '% assisted at rim', '% shots 2p J', 'FG% 2pt Jumpers', '% assisted 2pt Jumpers', '% of shots 3pt', '3FG%', '% assisted 3pt', '% shots in Transition', 'Transition eFG%', 'Non-transition eFG%')
+head(hm1)
+
+pattern2 <- '<td><p align=\"center\"><a href=\"([^<]*).php\">([^<]*)</a></p></td>'
+datalines2 <- grep(pattern2, webpage5, value = TRUE)
+getexpr2 <- function(s,g)substring(s,g,g+attr(g,'match.length')-1)
+gg2 <- gregexpr(pattern2,datalines2)
+matches2 <- mapply(getexpr2,datalines2,gg2)
+result2 <- gsub(pattern2,'\\1',matches2)
+names(result2) <- NULL
+result2[1:363]
+hm2 <- as.data.frame(matrix(result2,ncol=1,byrow=TRUE))
+
+hm3 <- cbind(hm1,hm2)
+hm3 <- subset(hm3, select = c('V1', 'eFG%', '% shots at rim', 'FG% at rim', '% assisted at rim', '% shots 2p J', 'FG% 2pt Jumpers', '% assisted 2pt Jumpers', '% of shots 3pt', '3FG%', '% assisted 3pt', '% shots in Transition', 'Transition eFG%', 'Non-transition eFG%', 'Team'))
+hm3 <- subset(hm3, select = -c(Team))
+colnames(hm3)[colnames(hm3) == 'V1'] = 'Team'
+
+pattern3 <- '<td><p align=\"center\">([^<]*)</p></td>'
+datalines3 <- grep(pattern3, webpage5, value = TRUE)
+getexpr3 <- function(s,g)substring(s,g,g+attr(g,'match.length')-1)
+gg3 <- gregexpr(pattern3,datalines3)
+matches3 <- mapply(getexpr3,datalines3,gg3)
+result3 <- gsub(pattern3,'\\1',matches3)
+names(result3) <- NULL
+result3[1:4719]
+hm4 <- as.data.frame(matrix(result3,ncol=13,byrow=TRUE))
+
+hoopmath <- cbind(hm3, hm4)
+hoopmath <- hoopmath[,-2:-14]
+colnames(hoopmath)[colnames(hoopmath) == 'V1'] = 'eFG%'
+colnames(hoopmath)[colnames(hoopmath) == 'V2'] = '% shots at rim'
+colnames(hoopmath)[colnames(hoopmath) == 'V3'] = 'FG% at rim'
+colnames(hoopmath)[colnames(hoopmath) == 'V4'] = '%assisted at rim'
+colnames(hoopmath)[colnames(hoopmath) == 'V5'] = '% shots 2p J'
+colnames(hoopmath)[colnames(hoopmath) == 'V6'] = 'FG% 2pt Jumpers'
+colnames(hoopmath)[colnames(hoopmath) == 'V7'] = '%assisted 2pt Jumpers'
+colnames(hoopmath)[colnames(hoopmath) == 'V8'] = '%of shots 3pt'
+colnames(hoopmath)[colnames(hoopmath) == 'V9'] = '3FG%'
+colnames(hoopmath)[colnames(hoopmath) == 'V10'] = '%assisted 3pt'
+colnames(hoopmath)[colnames(hoopmath) == 'V11'] = '%shots in transition'
+colnames(hoopmath)[colnames(hoopmath) == 'V12'] = 'Transition eFG%'
+colnames(hoopmath)[colnames(hoopmath) == 'V13'] = 'Non-Transition eFG%'
+hoopmath$Team <- gsub('[2023]','',hoopmath$Team)
+
+hoopmath$`% shots at rim` <- as.numeric(hoopmath$`% shots at rim`)
+hoopmath$`% shots 2p J` <- as.numeric(hoopmath$`% shots 2p J`)
+hoopmath$`%of shots 3pt` <- as.numeric(hoopmath$`%of shots 3pt`)
+hoopmath$`eFG%` <- as.numeric(hoopmath$`eFG%`)
+hoopmath$`FG% at rim` <- as.numeric(hoopmath$`FG% at rim`)
+hoopmath$`FG% 2pt Jumpers` <- as.numeric(hoopmath$`FG% 2pt Jumpers`)
+hoopmath$`3FG%` <- as.numeric(hoopmath$`3FG%`)
+```
+
+#sports reference
+```{r}
+url3 <- paste0('https://www.sports-reference.com/cbb/seasons/men/', year, '-advanced-school-stats.html')
+webpage3 <- read_html(url3)
+all_team_advanced <- webpage3 %>%
+  html_table()
+all_team_advanced <- data.frame(all_team_advanced)
+
+all_team_advanced <- subset(all_team_advanced, select = -c(Var.1, Var.9, Var.12, Var.15, Var.18, Var.21))
+colnames(all_team_advanced) <- all_team_advanced[1,]
+all_team_advanced <- all_team_advanced[-1,]
+colnames(all_team_advanced)[8] = 'Conf_W'
+colnames(all_team_advanced)[9] = 'Conf_L'
+colnames(all_team_advanced)[10] = 'Home_W'
+colnames(all_team_advanced)[11] = 'Home_L'
+colnames(all_team_advanced)[12] = 'Away_W'
+colnames(all_team_advanced)[13] = 'Away_L'
+colnames(all_team_advanced)[14] = 'Tm_Pts'
+colnames(all_team_advanced)[15] = 'Opp_Pts'
+all_team_advanced <- all_team_advanced[-22,]
+all_team_advanced <- all_team_advanced[-21,]
+all_team_advanced <- all_team_advanced[-42,]
+all_team_advanced <- all_team_advanced[-41,]
+all_team_advanced <- all_team_advanced[-62,]
+all_team_advanced <- all_team_advanced[-61,]
+all_team_advanced <- all_team_advanced[-82,]
+all_team_advanced <- all_team_advanced[-81,]
+all_team_advanced <- all_team_advanced[-102,]
+all_team_advanced <- all_team_advanced[-101,]
+all_team_advanced <- all_team_advanced[-122,]
+all_team_advanced <- all_team_advanced[-121,]
+all_team_advanced <- all_team_advanced[-142,]
+all_team_advanced <- all_team_advanced[-141,]
+all_team_advanced <- all_team_advanced[-162,]
+all_team_advanced <- all_team_advanced[-161,]
+all_team_advanced <- all_team_advanced[-182,]
+all_team_advanced <- all_team_advanced[-181,]
+all_team_advanced <- all_team_advanced[-202,]
+all_team_advanced <- all_team_advanced[-201,]
+all_team_advanced <- all_team_advanced[-222,]
+all_team_advanced <- all_team_advanced[-221,]
+all_team_advanced <- all_team_advanced[-242,]
+all_team_advanced <- all_team_advanced[-241,]
+all_team_advanced <- all_team_advanced[-262,]
+all_team_advanced <- all_team_advanced[-261,]
+all_team_advanced <- all_team_advanced[-282,]
+all_team_advanced <- all_team_advanced[-281,]
+all_team_advanced <- all_team_advanced[-302,]
+all_team_advanced <- all_team_advanced[-301,]
+all_team_advanced <- all_team_advanced[-322,]
+all_team_advanced <- all_team_advanced[-321,]
+all_team_advanced <- all_team_advanced[-342,]
+all_team_advanced <- all_team_advanced[-341,]
+all_team_advanced <- all_team_advanced[-362,]
+all_team_advanced <- all_team_advanced[-361,]
+
+all_team_advanced$`TOV%` <- as.numeric(all_team_advanced$`TOV%`)
+all_team_advanced$`ORB%` <- as.numeric(all_team_advanced$`ORB%`)
+all_team_advanced$FTr <- as.numeric(all_team_advanced$FTr)
+all_team_advanced$ORtg <- as.numeric(all_team_advanced$ORtg)
+```
+
+#L stat looop
+```{r}
+for (i in 1:length(L_stats$Team)) {
+  if (L_stats$Team[i] != NCAA_team) {
+    L_stats$Team[i] = "Opponent"}}
+L_stats <- L_stats %>%
+  group_by(Team) %>%
+  summarise(Points = mean(PTS),
+            Allowed = mean(dPTS),
+            Pace = mean(oPOSS),
+            Poss = sum(oPOSS),
+            OffRtg = mean(ORTG),
+            DefRtg = mean(DRTG),
+            FGA = sum(FGA),
+            FGM = sum(FGM),
+            TPA = sum(TPA),
+            TPM = sum(TPM),
+            FTA = sum(FTA),
+            FTM = sum(FTM),
+            RIMM = sum(RIMM),
+            RIMA = sum(RIMA),
+            ORB = sum(ORB),
+            TO = sum(TO),
+            Trans = mean(oTransPCT),
+            TransPTS = mean(PTS_trans),
+            TransOrtg = mean(ORTG_trans),
+            HalfOrtg = mean(ORTG_half))
+L_stats <- L_stats %>%
+  mutate(Points = round(Points,1),
+         Pace = round(Pace,1),
+         
+         MIDM = FGM-RIMM-TPM,
+         MIDA = FGA-RIMA-TPA,
+         layup = round((RIMA/FGA)*100,1),
+         jumper = round((MIDA/FGA)*100,1),
+         three_pointer = round((TPA/FGA)*100,1),
+         layup_a_perc = round(pnorm((layup/(100-mean(hoopmath$`% shots at rim`)))/sd(hoopmath$`% shots at rim`)),2),
+         mid_a_perc = round(pnorm((jumper/(100-mean(hoopmath$`% shots 2p J`)))/sd(hoopmath$`% shots 2p J`)),2),
+         three_a_perc = round(pnorm((three_pointer/(100-mean(hoopmath$`%of shots 3pt`)))/sd(hoopmath$`%of shots 3pt`)),2),
+         
+         efg = round(((MIDM+RIMM+(1.5*TPM))/FGA)*100,1),
+         tov = round(TO/Poss*100,1),
+         OReb = round(ORB/(FGA-FGM)*100,1),
+         FTR = round(FTA/FGA*100,1),
+         efg_perc = round(pnorm((efg/(100-mean(hoopmath$`eFG%`)))/sd(hoopmath$`eFG%`)),2),
+         tov_perc = round(pnorm(-1*((tov/(100-mean(all_team_advanced$`TOV%`)))/sd(all_team_advanced$`TOV%`))),2),
+         OReb_perc = round(pnorm((OReb/(100-mean(all_team_advanced$`ORB%`)))/sd(all_team_advanced$`ORB%`)), 2),
+         FTR_perc = round(pnorm((FTR/(100-mean(all_team_advanced$FTr)))/sd(all_team_advanced$FTr)), 2),
+         
+         layup_tot = paste0(RIMM, "/", RIMA),
+         layup_per = round(RIMM/RIMA*100,1),
+         jumper_tot = paste0(FGM-RIMM-TPM, "/", FGA-RIMA-TPA),
+         jumper_per = (round((FGM-RIMM-TPM)/(FGA-RIMA-TPA)*100,1)),
+         three_pointer_tot = paste0(TPM,"/",TPA),
+         three_pointer_per = round(TPM/TPA*100,1),
+         layup_m_perc = round(pnorm((layup_per/(100-mean(hoopmath$`FG% at rim`)))/sd(hoopmath$`FG% at rim`)), 2),
+         jumper_m_perc = round(pnorm((jumper_per/(100-mean(hoopmath$`FG% 2pt Jumpers`)))/sd(hoopmath$`FG% 2pt Jumpers`)), 2),
+         three_m_perc = round(pnorm((TPM/(TPA-mean(hoopmath$`3FG%`)))/sd(hoopmath$`3FG%`)), 2),
+         
+         off_rtg_perc = round(pnorm((OffRtg-mean(all_team_advanced$ORtg))/sd(all_team_advanced$ORtg)), 2),
+         score = Points,
+         poss = Pace,
+         off_rtg = round(OffRtg,1),
+         halfcourt = (1-Trans),
+         halfcourt_rtg = round(HalfOrtg,1),
+         trans = Trans,
+         trans_rtg = round(TransOrtg,1),
+         
+         url = c('https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/U%2B216C.svg/640px-U%2B216C.svg.png', 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/U%2B216C.svg/640px-U%2B216C.svg.png'),
+         team = c('Offense in Losses', 'Defense in Losses'))
+```
+
+#W stat loop
+```{r}
+for (i in 1:length(W_stats$Team)) {
+  if (W_stats$Team[i] != NCAA_team) {
+    W_stats$Team[i] = "Opponent"
+  }
+}
+W_stats <- W_stats %>%
+  group_by(Team) %>%
+  summarise(Points = mean(PTS),
+            Allowed = mean(dPTS),
+            Pace = mean(oPOSS),
+            Poss = sum(oPOSS),
+            OffRtg = mean(ORTG),
+            DefRtg = mean(DRTG),
+            FGA = sum(FGA),
+            FGM = sum(FGM),
+            TPA = sum(TPA),
+            TPM = sum(TPM),
+            FTA = sum(FTA),
+            FTM = sum(FTM),
+            RIMM = sum(RIMM),
+            RIMA = sum(RIMA),
+            ORB = sum(ORB),
+            TO = sum(TO),
+            Trans = mean(oTransPCT),
+            TransPTS = mean(PTS_trans),
+            TransOrtg = mean(ORTG_trans),
+            HalfOrtg = mean(ORTG_half))
+W_stats <- W_stats %>%
+  mutate(Points = round(Points,1),
+         Pace = round(Pace,1),
+         
+         MIDM = FGM-RIMM-TPM,
+         MIDA = FGA-RIMA-TPA,
+         layup = round((RIMA/FGA)*100,1),
+         jumper = round((MIDA/FGA)*100,1),
+         three_pointer = round((TPA/FGA)*100,1),
+         layup_a_perc = round(pnorm((layup/(100-mean(hoopmath$`% shots at rim`)))/sd(hoopmath$`% shots at rim`)),2),
+         mid_a_perc = round(pnorm((jumper/(100-mean(hoopmath$`% shots 2p J`)))/sd(hoopmath$`% shots 2p J`)),2),
+         three_a_perc = round(pnorm((three_pointer/(100-mean(hoopmath$`%of shots 3pt`)))/sd(hoopmath$`%of shots 3pt`)),2),
+         
+         efg = round(((MIDM+RIMM+(1.5*TPM))/FGA)*100,1),
+         tov = round(TO/Poss*100,1),
+         OReb = round(ORB/(FGA-FGM)*100,1),
+         FTR = round(FTA/FGA*100,1),
+         efg_perc = round(pnorm((efg/(100-mean(hoopmath$`eFG%`)))/sd(hoopmath$`eFG%`)),2),
+         tov_perc = round(pnorm(-1*((tov/(100-mean(all_team_advanced$`TOV%`)))/sd(all_team_advanced$`TOV%`))),2),
+         OReb_perc = round(pnorm((OReb/(100-mean(all_team_advanced$`ORB%`)))/sd(all_team_advanced$`ORB%`)), 2),
+         FTR_perc = round(pnorm((FTR/(100-mean(all_team_advanced$FTr)))/sd(all_team_advanced$FTr)), 2),
+         
+         layup_tot = paste0(RIMM, "/", RIMA),
+         layup_per = round(RIMM/RIMA*100,1),
+         jumper_tot = paste0(FGM-RIMM-TPM, "/", FGA-RIMA-TPA),
+         jumper_per = (round((FGM-RIMM-TPM)/(FGA-RIMA-TPA)*100,1)),
+         three_pointer_tot = paste0(TPM,"/",TPA),
+         three_pointer_per = round(TPM/TPA*100,1),
+         layup_m_perc = round(pnorm((layup_per/(100-mean(hoopmath$`FG% at rim`)))/sd(hoopmath$`FG% at rim`)), 2),
+         jumper_m_perc = round(pnorm((jumper_per/(100-mean(hoopmath$`FG% 2pt Jumpers`)))/sd(hoopmath$`FG% 2pt Jumpers`)), 2),
+         three_m_perc = round(pnorm((TPM/(TPA-mean(hoopmath$`3FG%`)))/sd(hoopmath$`3FG%`)), 2),
+         
+         off_rtg_perc = round(pnorm((OffRtg-mean(all_team_advanced$ORtg))/sd(all_team_advanced$ORtg)), 2),
+         score = Points,
+         poss = Pace,
+         off_rtg = round(OffRtg,1),
+         halfcourt = (1-Trans),
+         halfcourt_rtg = round(HalfOrtg,1),
+         trans = Trans,
+         trans_rtg = round(TransOrtg,1),
+         
+         url = c('https://see.fontimg.com/api/renderfont4/BY8G/eyJyIjoiZnMiLCJoIjoxNzEsInciOjI2MywiZnMiOjY1LCJmZ2MiOiIjMDAwMDAwIiwiYmdjIjoiI0ZGRkZGRiIsInQiOjF9/8J2Qlg/preview.png', 'https://see.fontimg.com/api/renderfont4/BY8G/eyJyIjoiZnMiLCJoIjoxNzEsInciOjI2MywiZnMiOjY1LCJmZ2MiOiIjMDAwMDAwIiwiYmdjIjoiI0ZGRkZGRiIsInQiOjF9/8J2Qlg/preview.png'),
+         team = c('Offense in Wins', 'Defense in Wins'))
+```
+
+#offense data
+```{r}
+offense <- rbind(W_stats, L_stats)
+offense <- offense[c(1,3),]
+
+general_o <- offense %>%
+  select(url, team, efg, efg_perc, tov, tov_perc, OReb, OReb_perc, FTR, FTR_perc)
+shot_loc_o  <- offense %>%
+  select(url, team, layup, layup_a_perc, jumper, mid_a_perc, three_pointer, three_a_perc)
+shot_per_o  <- offense %>%
+  select(url, team, layup_tot, layup_per, layup_m_perc, jumper_tot, jumper_per, jumper_m_perc, three_pointer_tot, three_pointer_per, three_m_perc)
+overview_o  <- offense %>%
+  select(url, team, score, poss, off_rtg, off_rtg_perc, halfcourt, halfcourt_rtg, trans, trans_rtg)
+```
+
+#defense data
+```{r}
+defense <- rbind(W_stats, L_stats)
+defense <- defense[c(2,4),]
+
+general_d <- defense %>%
+  select(url, team, efg, efg_perc, tov, tov_perc, OReb, OReb_perc, FTR, FTR_perc)
+shot_loc_d  <- defense %>%
+  select(url, team, layup, layup_a_perc, jumper, mid_a_perc, three_pointer, three_a_perc)
+shot_per_d  <- defense %>%
+  select(url, team, layup_tot, layup_per, layup_m_perc, jumper_tot, jumper_per, jumper_m_perc, three_pointer_tot, three_pointer_per, three_m_perc)
+overview_d  <- defense %>%
+  select(url, team, score, poss, off_rtg, off_rtg_perc, halfcourt, halfcourt_rtg, trans, trans_rtg)
+```
+
+#offense overview table
+```{r}
+overview_o_table <- overview_o %>%
+  gt() %>%
+  cols_label(url = '', team = '', score = 'Score', poss = 'Possessions', off_rtg = 'Rtg.', off_rtg_perc = '%ile', halfcourt = '%', halfcourt_rtg = 'Rtg.', trans = '%', trans_rtg = 'Rtg.') %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  tab_header(title = md('**General**')) %>%
+  tab_spanner(label = md('**Total**'), columns = vars(poss, off_rtg, off_rtg_perc)) %>%
+  tab_spanner(label = md('**Halfcourt**'), columns = vars(halfcourt, halfcourt_rtg)) %>%
+  tab_spanner(label = md('**Transition**'), columns = vars(trans, trans_rtg)) %>%
+  fmt_percent(columns = vars(off_rtg_perc, halfcourt, trans), decimals = 0) %>%
+  gt_theme_538() %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  opt_align_table_header(align = 'center') %>%
+  data_color(columns = vars(off_rtg_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(0, 1), na.color = "#00441BFF")) %>%
+  gtsave(save_name12)
+```
+
+#offense general table
+```{r}
+general_o_table <- general_o %>%
+  gt() %>%
+  cols_label(url = '', team = '', efg = '', efg_perc = '', tov = '', tov_perc = '', OReb = '', OReb_perc = '', FTR = '', FTR_perc = '') %>%
+  tab_header(title = md('**Overview & Four Factors**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(25))}) %>% 
+  gt_theme_538() %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  opt_align_table_header(align = 'center') %>%
+  tab_spanner(label = md('**eFG%**'), columns = vars(efg, efg_perc)) %>%
+  tab_spanner(label = md('**TOV%**'), columns = vars(tov, tov_perc)) %>%
+  tab_spanner(label = md('**OReb%**'), columns = vars(OReb, OReb_perc)) %>%
+  tab_spanner(label = md('**FTR**'), columns = vars(FTR, FTR_perc)) %>%
+  fmt_percent(columns = vars(efg_perc, tov_perc, OReb_perc, FTR_perc), decimals = 0) %>%
+  data_color(columns = vars(efg_perc, tov_perc, OReb_perc, FTR_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(0, 1), na.color = "#00441BFF")) %>%
+  gtsave(save_name13)
+```
+
+#offense shot location table
+```{r}
+shotloc_o_table <- shot_loc_o %>%
+  gt() %>%
+  cols_label(url = '', team = '', layup = '', layup_a_perc = '', jumper = '', mid_a_perc = '', three_pointer = '', three_a_perc = '') %>%
+  tab_header(title = md('**Shot Locations**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(25))}) %>% 
+  gt_theme_538() %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  opt_align_table_header(align = 'center') %>%
+  tab_spanner(label = md('**Layups**'), columns = vars(layup, layup_a_perc)) %>%
+  tab_spanner(label = md('**Midrange**'), columns = vars(jumper, mid_a_perc)) %>%
+  tab_spanner(label = md('**3-Pointers**'), columns = vars(three_pointer, three_a_perc)) %>%
+  fmt_percent(columns = vars(layup_a_perc, mid_a_perc, three_a_perc), decimals = 0) %>%
+  data_color(columns = vars(layup_a_perc, mid_a_perc, three_a_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(0, 1), na.color = "#00441BFF")) %>%
+  gtsave(save_name14)
+```
+
+#offense shooting percentage table
+```{r}
+shotper_o_table <- shot_per_o %>%
+  gt() %>%
+  cols_label(url = '', team = '', layup_tot = '', layup_per = '', layup_m_perc = '', jumper_tot = '', jumper_per = '', jumper_m_perc = '', three_pointer_tot = '', three_pointer_per = '', three_m_perc = '') %>%
+  tab_header(title = md('**Shooting Percentages**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(25))}) %>% 
+  gt_theme_538() %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  opt_align_table_header(align = 'center') %>%
+  fmt_percent(columns = vars(layup_m_perc, jumper_m_perc, three_m_perc), decimals = 0) %>%
+  tab_spanner(label = md('**Layups**'), columns = vars(layup_tot, layup_per, layup_m_perc)) %>%
+  tab_spanner(label = md('**Midrange**'), columns = vars(jumper_tot, jumper_per, jumper_m_perc)) %>%
+  tab_spanner(label = md('**3-Pointers**'), columns = vars(three_pointer_tot, three_pointer_per, three_m_perc)) %>%
+  data_color(columns = vars(layup_m_perc, jumper_m_perc, three_m_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(0, 1), na.color = "#00441BFF")) %>%
+  gtsave(save_name15)
+```
+
+#defense overview table
+```{r}
+overview_d_table <- overview_d %>%
+  gt() %>%
+  cols_label(url = '', team = '', score = 'Score', poss = 'Possessions', off_rtg = 'Rtg.', off_rtg_perc = '%ile', halfcourt = '%', halfcourt_rtg = 'Rtg.', trans = '%', trans_rtg = 'Rtg.') %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  tab_header(title = md('**General**')) %>%
+  tab_spanner(label = md('**Total**'), columns = vars(poss, off_rtg, off_rtg_perc)) %>%
+  tab_spanner(label = md('**Halfcourt**'), columns = vars(halfcourt, halfcourt_rtg)) %>%
+  tab_spanner(label = md('**Transition**'), columns = vars(trans, trans_rtg)) %>%
+  fmt_percent(columns = vars(off_rtg_perc, halfcourt, trans), decimals = 0) %>%
+  gt_theme_538() %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  opt_align_table_header(align = 'center') %>%
+  data_color(columns = vars(off_rtg_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(0, 1), na.color = "#00441BFF")) %>%
+  gtsave(save_name16)
+```
+
+#defense general table
+```{r}
+general_d_table <- general_d %>%
+  gt() %>%
+  cols_label(url = '', team = '', efg = '', efg_perc = '', tov = '', tov_perc = '', OReb = '', OReb_perc = '', FTR = '', FTR_perc = '') %>%
+  tab_header(title = md('**Overview & Four Factors**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(25))}) %>% 
+  gt_theme_538() %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  opt_align_table_header(align = 'center') %>%
+  tab_spanner(label = md('**eFG%**'), columns = vars(efg, efg_perc)) %>%
+  tab_spanner(label = md('**TOV%**'), columns = vars(tov, tov_perc)) %>%
+  tab_spanner(label = md('**OReb%**'), columns = vars(OReb, OReb_perc)) %>%
+  tab_spanner(label = md('**FTR**'), columns = vars(FTR, FTR_perc)) %>%
+  fmt_percent(columns = vars(efg_perc, tov_perc, OReb_perc, FTR_perc), decimals = 0) %>%
+  data_color(columns = vars(efg_perc, tov_perc, OReb_perc, FTR_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(0, 1), na.color = "#00441BFF")) %>%
+  gtsave(save_name17)
+```
+
+#defense shot location table
+```{r}
+shotloc_d_table <- shot_loc_d %>%
+  gt() %>%
+  cols_label(url = '', team = '', layup = '', layup_a_perc = '', jumper = '', mid_a_perc = '', three_pointer = '', three_a_perc = '') %>%
+  tab_header(title = md('**Shot Locations**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(25))}) %>% 
+  gt_theme_538() %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  opt_align_table_header(align = 'center') %>%
+  tab_spanner(label = md('**Layups**'), columns = vars(layup, layup_a_perc)) %>%
+  tab_spanner(label = md('**Midrange**'), columns = vars(jumper, mid_a_perc)) %>%
+  tab_spanner(label = md('**3-Pointers**'), columns = vars(three_pointer, three_a_perc)) %>%
+  fmt_percent(columns = vars(layup_a_perc, mid_a_perc, three_a_perc), decimals = 0) %>%
+  data_color(columns = vars(layup_a_perc, mid_a_perc, three_a_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(0, 1), na.color = "#00441BFF")) %>%
+  gtsave(save_name18)
+```
+
+#defense shooting percentage table
+```{r}
+shotper_d_table <- shot_per_d %>%
+  gt() %>%
+  cols_label(url = '', team = '', layup_tot = '', layup_per = '', layup_m_perc = '', jumper_tot = '', jumper_per = '', jumper_m_perc = '', three_pointer_tot = '', three_pointer_per = '', three_m_perc = '') %>%
+  tab_header(title = md('**Shooting Percentages**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(25))}) %>% 
+  gt_theme_538() %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  opt_align_table_header(align = 'center') %>%
+  fmt_percent(columns = vars(layup_m_perc, jumper_m_perc, three_m_perc), decimals = 0) %>%
+  tab_spanner(label = md('**Layups**'), columns = vars(layup_tot, layup_per, layup_m_perc)) %>%
+  tab_spanner(label = md('**Midrange**'), columns = vars(jumper_tot, jumper_per, jumper_m_perc)) %>%
+  tab_spanner(label = md('**3-Pointers**'), columns = vars(three_pointer_tot, three_pointer_per, three_m_perc)) %>%
+  data_color(columns = vars(layup_m_perc, jumper_m_perc, three_m_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(0, 1), na.color = "#00441BFF")) %>%
+  gtsave(save_name19)
+```
+

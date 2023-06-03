@@ -1,0 +1,87 @@
+---
+title: "Player_Comparison"
+author: "Greg"
+date: "2023-05-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(dplyr)
+library(tidyverse)
+library(bigballR)
+library(toRvik)
+library(ncaahoopR)
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(dplyr)
+library(gtExtras)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
+```
+
+#inputs
+```{r}
+ESPN_team <- 'UMass'#dict$ESPN
+opp_pg <- 'Keon Thompson'
+opp_sg <- 'T.J. Weeks Jr.'
+opp_sf <- 'Matt Cross'
+opp_pf <- 'Isaac Kante'
+opp_C <- 'Wildens Leveque'
+UMass_pg <- 'Keon Thompson'
+UMass_sg <- 'T.J. Weeks Jr.'
+UMass_sf <- 'Matt Cross'
+UMass_pf <- 'Isaac Kante'
+UMass_C <- 'Wildens Leveque'
+save_name4 <- paste0(ESPN_team, ' Player Comparison.png')
+```
+
+#rosters
+```{r}
+opp_roster <- ncaahoopR::get_roster(ESPN_team, season = '2022-23')
+opp_roster <- opp_roster %>%
+  mutate(height2=height, name2=name, player_image2=player_image) %>%
+  select(height2, name2, player_image2)
+opp_roster <- filter(opp_roster, name2 %in% c(opp_pg, opp_sg, opp_sf, opp_pf, opp_C))
+opp_roster <- opp_roster %>% arrange(factor(name2, levels = c(opp_pg, opp_sg, opp_sf, opp_pf, opp_C)))
+position = c('pg','sg','sf','pf','c')
+opp_roster <- cbind(opp_roster, position)
+UMass_roster <- ncaahoopR::get_roster('UMass', season = '2022-23')
+UMass_roster <- UMass_roster %>%
+  select(player_image, name, height)
+UMass_roster <- filter(UMass_roster, name %in% c(UMass_pg, UMass_sg, UMass_sf, UMass_pf, UMass_C))
+UMass_roster <- UMass_roster %>% arrange(factor(name, levels = c(UMass_pg, UMass_sg, UMass_sf, UMass_pf, UMass_C)))
+UMass_roster <- cbind(UMass_roster, position)
+```
+
+#merge
+```{r}
+full_comp <- merge(UMass_roster, opp_roster, by='position')
+pos <- c('pg','sg','sf','pf','c')
+full_comp <- full_comp %>% slice(match(pos, position))
+full_comp <- full_comp[,-1]
+```
+
+#make table
+```{r}
+PlayerComp <- full_comp %>%
+  gt() %>%
+  cols_label(player_image = '', name = '', height = '', height2 = '', name2 = '', player_image2 = '') %>%
+  tab_header(title = md('**Player Comparison**')) %>%
+  tab_spanner(label = 'UMasss', columns = vars(player_image, name, height)) %>%
+  tab_spanner(label = ESPN_team, columns = vars(height2, name2, player_image2)) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  text_transform(locations = cells_body(vars(player_image2)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  gt_theme_538() %>%
+  opt_align_table_header(align = 'center') %>%
+  gt_add_divider(height) %>%
+  cols_width(vars(player_image,height,height2,player_image2) ~ px(60), vars(name,name2) ~ px(175)) %>%
+  cols_align(align = 'center', vars(player_image, name, height, height2, name2, player_image2)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(save_name4)
+```
+

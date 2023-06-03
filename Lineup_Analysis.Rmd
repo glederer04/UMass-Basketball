@@ -1,0 +1,76 @@
+---
+title: "Lineup_Analysis"
+author: "Greg"
+date: "2023-05-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(toRvik)
+library(tidyr)
+library(tidyverse)
+library(bigballR)
+library(ncaahoopR)
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(dplyr)
+library(gtExtras)
+library(data.table)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
+```
+
+#inputs
+```{r}
+NCAA_team <- 'Massachusetts'#dict$NCAA
+save_name9 <- paste0(NCAA_team, ' Lineups.png')
+```
+
+#schedule and linups
+```{r}
+schedule <- get_team_schedule(season = '2022-23', team.name = NCAA_team)
+lineups <- get_lineups(play_by_play_data = get_play_by_play(schedule$Game_ID), include_transition = T)
+```
+
+#linup data
+```{r}
+opp_lineups <- lineups %>%
+  filter(Team == NCAA_team) %>%
+  arrange(desc(Mins))%>%
+  mutate(ORTG = round(ORTG,1),
+         DRTG = round(DRTG,1),
+         NETRTG = round(NETRTG,1),
+         Mins = round(Mins,0),
+         P1 = sub("^\\S+\\s+", '', gsub(".", " ", P1, fixed=TRUE)),
+         P2 = sub("^\\S+\\s+", '', gsub(".", " ", P2, fixed=TRUE)),
+         P3 = sub("^\\S+\\s+", '', gsub(".", " ", P3, fixed=TRUE)),
+         P4 = sub("^\\S+\\s+", '', gsub(".", " ", P4, fixed=TRUE)),
+         P5 = sub("^\\S+\\s+", '', gsub(".", " ", P5, fixed=TRUE)),
+         Lineup = paste0(P1, " - ", P2," - ", P3," - ", P4," - ", P5)) %>%
+  slice(1:10) %>%
+  select(Lineup, Mins, ORTG, DRTG, NETRTG)
+```
+
+#table
+```{r}
+lineup_table <- opp_lineups %>%
+  gt() %>%
+  cols_label(Lineup = md('**Lineup**'), Mins = md('**Mins**'), ORTG = md('**ORtg.**'), DRTG = md('**DRtg.**'), NETRTG = md('**Net Rtg.**')) %>%
+  tab_header(title = md(paste0(NCAA_team, ' Lineups'))) %>%
+  data_color(columns = c(NETRTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(min(opp_lineups$NETRTG),max(opp_lineups$NETRTG)),na.color = "#00441BFF")) %>%
+  data_color(columns = c(ORTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(min(opp_lineups$ORTG),max(opp_lineups$ORTG)),na.color = "#00441BFF")) %>%
+  data_color(columns = c(DRTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(min(opp_lineups$DRTG),max(opp_lineups$DRTG)),na.color = "#00441BFF")) %>%
+  cols_align(align = 'center', columns = vars(Lineup)) %>%
+  cols_align(align = 'left', columns = vars(NETRTG, ORTG, DRTG)) %>%
+  cols_width(vars(Lineup) ~ px(500)) %>%
+  gt_add_divider(Lineup) %>%
+  opt_row_striping() %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(save_name9)
+```
+

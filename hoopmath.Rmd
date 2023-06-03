@@ -1,0 +1,71 @@
+---
+title: "hoopmath"
+author: "Greg"
+date: "2023-04-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+webpage5 <- readLines('https://hoop-math.com/leader_o2023.php')
+webpage5 <- data.frame(webpage5)
+webpage5 <- webpage5[-c(5559:5571),]
+webpage5 <- data.frame(webpage5)
+webpage5 <- webpage5[-c(0:99),]
+pattern <- '<th><p align=\"center\">([^<]*)</p></th>'
+datalines <- grep(pattern, webpage5, value = TRUE)
+getexpr <- function(s,g)substring(s,g,g+attr(g,'match.length')-1)
+gg <- gregexpr(pattern,datalines)
+matches <- mapply(getexpr,datalines,gg)
+result <- gsub(pattern,'\\1',matches)
+names(result) <- NULL
+result[1:14]
+hoopmath <- as.data.frame(matrix(result,ncol=14,byrow=TRUE))
+names(hoopmath) = c('Team', 'eFG%', '% shots at rim', 'FG% at rim', '% assisted at rim', '% shots 2p J', 'FG% 2pt Jumpers', '% assisted 2pt Jumpers', '% of shots 3pt', '3FG%', '% assisted 3pt', '% shots in Transition', 'Transition eFG%', 'Non-transition eFG%')
+head(hoopmath)
+
+pattern2 <- '<td><p align=\"center\"><a href=\"([^<]*).php\">([^<]*)</a></p></td>'
+datalines2 <- grep(pattern2, webpage5, value = TRUE)
+getexpr2 <- function(s,g)substring(s,g,g+attr(g,'match.length')-1)
+gg2 <- gregexpr(pattern2,datalines2)
+matches2 <- mapply(getexpr2,datalines2,gg2)
+result2 <- gsub(pattern2,'\\1',matches2)
+names(result2) <- NULL
+result2[1:363]
+hoopmath2 <- as.data.frame(matrix(result2,ncol=1,byrow=TRUE))
+
+hoopmath_t <- cbind(hoopmath,hoopmath2)
+hoopmath_t <- subset(hoopmath_t, select = c('V1', 'eFG%', '% shots at rim', 'FG% at rim', '% assisted at rim', '% shots 2p J', 'FG% 2pt Jumpers', '% assisted 2pt Jumpers', '% of shots 3pt', '3FG%', '% assisted 3pt', '% shots in Transition', 'Transition eFG%', 'Non-transition eFG%', 'Team'))
+hoopmath_t <- subset(hoopmath_t, select = -c(Team))
+colnames(hoopmath_t)[colnames(hoopmath_t) == 'V1'] = 'Team'
+
+pattern3 <- '<td><p align=\"center\">([^<]*)</p></td>'
+datalines3 <- grep(pattern3, webpage5, value = TRUE)
+getexpr3 <- function(s,g)substring(s,g,g+attr(g,'match.length')-1)
+gg3 <- gregexpr(pattern3,datalines3)
+matches3 <- mapply(getexpr3,datalines3,gg3)
+result3 <- gsub(pattern3,'\\1',matches3)
+names(result3) <- NULL
+result3[1:4719]
+hoopmath3 <- as.data.frame(matrix(result3,ncol=13,byrow=TRUE))
+
+hoopmath_f <- cbind(hoopmath_t, hoopmath3)
+hoopmath_f <- hoopmath_f[,-2:-14]
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V1'] = 'eFG%'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V2'] = '% shots at rim'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V3'] = 'FG% at rim'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V4'] = '%assisted at rim'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V5'] = '% shots 2p J'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V6'] = 'FG% 2pt Jumpers'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V7'] = '%assisted 2pt Jumpers'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V8'] = '%of shots 3pt'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V9'] = '3FG%'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V10'] = '%assisted 3pt'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V11'] = '%shots in transition'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V12'] = 'Transition eFG%'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V13'] = 'Non-Transition eFG%'
+```
+

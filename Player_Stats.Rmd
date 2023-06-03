@@ -1,0 +1,224 @@
+---
+title: "Player_Stats"
+author: "Greg"
+date: "2023-05-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(bigballR)
+library(toRvik)
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(RGraphics)
+library(gridExtra)
+library(stringr)
+library(dplyr)
+library(ncaahoopR)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
+```
+
+#input
+```{r}
+NCAA_team <- 'Massachusetts'#dict$NCAA
+ESPN_team <- 'UMass'#dict$ESPN
+save_name6 <-paste0(NCAA_team, ' Basic Table.png')
+save_name7 <-paste0(NCAA_team, ' Shooting Table.png')
+save_name8 <-paste0(NCAA_team, ' Advanced Table.png')
+```
+
+#roster
+```{r}
+team_roster <- ncaahoopR::get_roster(ESPN_team, season = '2022-23')
+team_roster <- team_roster %>%
+  mutate(num = number) %>%
+  select(num, name, position, height, player_image, class, weight)
+```
+
+#get stats
+```{r}
+bart_player_stats <- bart_player_season(year=2023, stat = 'all')
+basic_player_stats <- bart_player_stats %>%
+  filter(team == NCAA_team) %>%
+  mutate(mpg = round(mpg,1),
+         ppg = round(ppg,1),
+         apg = round(apg,1),
+         rpg = round(rpg,1),
+         spg = round(spg,1),
+         bpg = round(bpg,1),
+         fg_pct = round(fg_pct*100,1),
+         three_pct = round(three_pct*100,1)) %>%
+  select(player, pos, num, hgt, mpg, ppg, rpg, apg, spg, bpg, fg_pct, three_pct)
+```
+
+#schedule & stats
+```{r}
+schedule <- get_team_schedule(team.name = NCAA_team, season = "2022-23")
+stats <- get_player_stats(play_by_play_data = get_play_by_play(schedule$Game_ID[!is.na(schedule$Game_ID)]), multi.games = T, simple = F)
+roster <- get_team_roster(team.name = NCAA_team, season = "2022-23")
+roster <- roster %>%
+  mutate(num = Jersey) %>%
+  select(Player, num)
+stats <- stats %>%
+  filter(Team == NCAA_team) %>%
+  mutate(rim = paste0(RIMM, "/", RIMA),
+         rim_pct = round(RIM.*100,1),
+         mid = paste0(MIDM, "/", MIDA),
+         mid_pct = round(MID.*100,1)) %>%
+  select(Player, rim, rim_pct, mid, mid_pct)
+stats <- merge(stats, roster, by="Player")
+stats <- stats %>%
+  select(num, rim, rim_pct, mid, mid_pct)
+stats$num = as.numeric(as.character(stats$num))
+```
+
+#shooting stats
+```{r}
+shooting_player_stats <- bart_player_stats %>%
+  filter(team == NCAA_team) %>%
+  select(team, player, num, mpg, efg, ts, three_m, three_a, three_pct, ftm, fta, ft_pct)
+shooting_player_stats <- merge(shooting_player_stats, stats, by='num')
+shooting_player_stats <- shooting_player_stats %>%
+  filter(team == NCAA_team) %>%
+  arrange(desc(mpg)) %>%
+  mutate(three = paste0(three_m, "/", three_a),
+         three_pct = round(three_pct*100,1),
+         ft = paste0(ftm, "/", fta),
+         ft_pct = round(ft_pct*100,1)) %>%
+  select(player, num, mpg, efg, ts, rim, rim_pct, mid, mid_pct, three, three_pct, ft, ft_pct)
+shooting_player_stats[is.na(shooting_player_stats)] <- 0
+```
+
+#advanced stats
+```{r}
+advanced_player_stats <- bart_player_stats %>%
+  filter(team == NCAA_team) %>%
+  mutate(
+    three_PAr = three_a / (two_a + three_a),
+    three_PAr = (three_PAr * 100),
+    three_PAr = round(three_PAr,1),
+    ast_to = round(ast_to,1),
+    net_rating = round(ortg-drtg,1),
+    obpm = round(obpm,1), 
+    dbpm = round(dbpm,1), 
+    bpm = round(bpm,1)) %>%
+  select(player, num, mpg, usg, net_rating, oreb_rate, dreb_rate, ast, to, ast_to, blk, stl, ftr, pfr, obpm, dbpm, bpm, three_PAr)
+```
+
+#merge basic
+```{r}
+basic_player_stats <- merge(basic_player_stats, team_roster, by = 'num')
+basic_player_stats <- basic_player_stats %>%
+  select(player_image, player, class, num, position, hgt, weight, mpg, ppg, rpg, apg, spg, bpg, fg_pct, three_pct) %>%
+  arrange(desc(mpg))
+```
+
+#merge shooting
+```{r}
+shooting_player_stats <- merge(team_roster, shooting_player_stats, by="num")
+shooting_player_stats <- shooting_player_stats %>%
+  arrange(desc(mpg)) %>%
+  select(player_image, player, efg, ts, rim, rim_pct, mid, mid_pct, three, three_pct, ft, ft_pct)
+```
+
+#merge advanced
+```{r}
+advanced_player_stats <- merge(advanced_player_stats, team_roster, by = 'num')
+advanced_player_stats <- advanced_player_stats %>%
+  arrange(desc(mpg)) %>%
+  select(player_image, player, usg, net_rating, bpm, oreb_rate, ast, to, ast_to, ftr, three_PAr, obpm, dreb_rate, blk, stl, pfr, dbpm)
+```
+
+#basic table
+```{r}
+basic_table <- gt(basic_player_stats) %>%
+  tab_header(title = md('**Player Stats**')) %>%
+  tab_source_note(source_note = md('*Data per Barrtorvik*')) %>%
+  tab_spanner(label = 'Physical', columns = c(position, hgt, weight)) %>%
+  tab_spanner(label = 'Basic Stats', columns = c(mpg, ppg, rpg, apg)) %>%
+  tab_spanner(label = 'Defense', columns = c(spg, bpg)) %>%
+  tab_spanner(label = 'Efficiency', columns = c(fg_pct, three_pct)) %>%
+  cols_label(player_image = '', player = md('**Player**'), class = md('**Year**'), num = md('**#**'), position = md('**Pos**'), hgt = md('**Hgt.** '), weight = md('**Wgt.** '), mpg = md('**MPG**'), ppg = md('**PPG**'), rpg = md('**RPG**'), apg = md('**APG**'), spg = md('**STL**'), bpg = md('**BLK**'), fg_pct = md('**FG%**'), three_pct = md('**3pt%**')) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  gt_add_divider(num) %>%
+  gt_add_divider(weight) %>%
+  gt_add_divider(apg) %>%
+  gt_add_divider(bpg) %>%
+  opt_row_striping() %>%
+  gt_theme_538() %>%
+  tab_options(heading.title.font.size = 40) %>%
+  data_color(columns = c(ppg), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(rpg), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(apg), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(fg_pct), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(three_pct), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  opt_table_font(font = google_font('Times New Roman'), weight = 1) %>%
+  opt_all_caps(all_caps = FALSE) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(save_name6)
+```
+
+#shooting table
+```{r}
+shooting_table <- gt(shooting_player_stats) %>%
+  tab_header(title = md('**Shooting Stats**')) %>%
+  tab_source_note(source_note = md('*Data per Barrtorvik*')) %>%
+  tab_spanner(label = 'Around the Rim', columns = c(rim, rim_pct)) %>%
+  tab_spanner(label = 'Mid Range', columns = c(mid, mid_pct)) %>%
+  tab_spanner(label = 'From Three', columns = c(three, three_pct)) %>%
+  tab_spanner(label = 'Free Throw', columns = c(ft, ft_pct)) %>%
+  cols_label(player_image = '', player = md('**Player**'), efg = md('**eFG%**'), ts = md('**TS%**'), rim = md('**Rim**'), rim_pct = md('**Rim%**'), mid = md('**Mid**'), mid_pct = md('**Mid%**'), three = md('**3P**'), three_pct = md('**3P%**'), ft = md('**FT**'), ft_pct = md('**FT%**')) %>%
+  gt_add_divider(ts) %>%
+  gt_add_divider(rim_pct) %>%
+  gt_add_divider(mid_pct) %>%
+  gt_add_divider(three_pct) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  opt_row_striping() %>%
+  gt_theme_538() %>%
+  tab_options(heading.title.font.size = 40) %>%
+  data_color(columns = c(efg), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(ts), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(rim_pct), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(mid_pct), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(three_pct), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(ft_pct), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  opt_table_font(font = google_font('Times New Roman'), weight = 1) %>%
+  opt_all_caps(all_caps = FALSE) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(save_name7)
+```
+
+#advanced table
+```{r}
+advanced_table <- gt(advanced_player_stats) %>%
+  tab_header(title = md('**Advanced Stats**')) %>%
+  tab_source_note(source_note = md('*Data per Barrtorvik*')) %>%
+  tab_spanner(label = 'Overall', columns = c(usg, net_rating, bpm)) %>%
+  tab_spanner(label = 'Offensive', columns = c(oreb_rate, ast, to, ast_to, ftr, three_PAr, obpm)) %>%
+  tab_spanner(label = 'Defensive', columns = c(dreb_rate, blk, stl, pfr, dbpm)) %>%
+  cols_label(player_image = "", player = md("**Player**"), usg = md("**Usg%**"), net_rating = md("**Net**"), bpm = md("**BPM**"), oreb_rate = md("**OReb%**"), ast = md("**Ast%**"), to = md("**TOV%**"), ast_to = md("**Ast/TOV**"), ftr = md("**FTr**"), three_PAr = md('**3PAr**'), obpm = md("**OBPM**"), dreb_rate = md("**DReb%**"), blk = md("**Blk%**"), stl = md("**Stl%**"), pfr = md("**PFr**"), dbpm = md("**DBPM**")) %>%
+  gt_add_divider(bpm) %>%
+  gt_add_divider(obpm) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  opt_row_striping() %>%
+  gt_theme_538() %>%
+  tab_options(heading.title.font.size = 40) %>%
+  data_color(columns = c(usg), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(net_rating), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(bpm), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(oreb_rate), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(dreb_rate), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(obpm), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(dbpm), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'ggsci::light_green_material') %>% as.character(), domain = NULL)) %>%
+  opt_table_font(font = google_font('Times New Roman'), weight = 1) %>%
+  opt_all_caps(all_caps = FALSE) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(save_name8)
+```
+

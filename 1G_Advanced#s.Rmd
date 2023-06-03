@@ -1,0 +1,299 @@
+---
+title: "1G_Advanced#s"
+author: "Greg"
+date: "2023-05-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(hoopR)
+library(toRvik)
+library(bigballR)
+library(ncaahoopR)
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(gtExtras)
+library(dplyr)
+library(rvest)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
+```
+
+#inputs
+```{r}
+ncaa_game_id <- 5472625 #stats.ncaa.org | play by play
+NCAA_Away <- 'Massachusetts' #dict$NCAA
+NCAA_Home <- 'Richmond' #dict$NCAA
+day <- 'March 7th, 2023'
+save_name1 <- paste0(NCAA_Home, ' Advanced Team Stats vs. ', NCAA_Away, ' .png')
+save_name2 <- paste0(NCAA_Away, ' Advanced Team Stats vs. ', NCAA_Home, ' .png')
+subtitle <- paste0(day, ' | ', NCAA_Away, ' vs. ', NCAA_Home)
+advanced_numbers <- read.csv('/Users/gregorylederer/Desktop/Umass Basketball/22-23 Advanced Team Stats.csv')
+```
+
+#ORtg and DRtg
+```{r}
+rtgs <- bart_factors(year = 2022)
+
+rtgs_a <- rtgs %>%
+  filter(team == NCAA_Away)
+away_off <- rtgs_a$adj_o
+away_def <- rtgs_a$adj_d
+
+rtgs_h <- rtgs %>%
+  filter(team == NCAA_Home)
+home_off <- rtgs_a$adj_o
+home_def <- rtgs_a$adj_d
+
+url3 <- paste0('https://www.sports-reference.com/cbb/seasons/men/', '2023', '-advanced-school-stats.html')
+webpage3 <- read_html(url3)
+all_team_advanced <- webpage3 %>%
+  html_table()
+all_team_advanced <- data.frame(all_team_advanced)
+
+all_team_advanced <- subset(all_team_advanced, select = -c(Var.1, Var.9, Var.12, Var.15, Var.18, Var.21))
+colnames(all_team_advanced) <- all_team_advanced[1,]
+all_team_advanced <- all_team_advanced[-1,]
+colnames(all_team_advanced)[8] = 'Conf_W'
+colnames(all_team_advanced)[9] = 'Conf_L'
+colnames(all_team_advanced)[10] = 'Home_W'
+colnames(all_team_advanced)[11] = 'Home_L'
+colnames(all_team_advanced)[12] = 'Away_W'
+colnames(all_team_advanced)[13] = 'Away_L'
+colnames(all_team_advanced)[14] = 'Tm_Pts'
+colnames(all_team_advanced)[15] = 'Opp_Pts'
+all_team_advanced <- all_team_advanced[-22,]
+all_team_advanced <- all_team_advanced[-21,]
+all_team_advanced <- all_team_advanced[-42,]
+all_team_advanced <- all_team_advanced[-41,]
+all_team_advanced <- all_team_advanced[-62,]
+all_team_advanced <- all_team_advanced[-61,]
+all_team_advanced <- all_team_advanced[-82,]
+all_team_advanced <- all_team_advanced[-81,]
+all_team_advanced <- all_team_advanced[-102,]
+all_team_advanced <- all_team_advanced[-101,]
+all_team_advanced <- all_team_advanced[-122,]
+all_team_advanced <- all_team_advanced[-121,]
+all_team_advanced <- all_team_advanced[-142,]
+all_team_advanced <- all_team_advanced[-141,]
+all_team_advanced <- all_team_advanced[-162,]
+all_team_advanced <- all_team_advanced[-161,]
+all_team_advanced <- all_team_advanced[-182,]
+all_team_advanced <- all_team_advanced[-181,]
+all_team_advanced <- all_team_advanced[-202,]
+all_team_advanced <- all_team_advanced[-201,]
+all_team_advanced <- all_team_advanced[-222,]
+all_team_advanced <- all_team_advanced[-221,]
+all_team_advanced <- all_team_advanced[-242,]
+all_team_advanced <- all_team_advanced[-241,]
+all_team_advanced <- all_team_advanced[-262,]
+all_team_advanced <- all_team_advanced[-261,]
+all_team_advanced <- all_team_advanced[-282,]
+all_team_advanced <- all_team_advanced[-281,]
+all_team_advanced <- all_team_advanced[-302,]
+all_team_advanced <- all_team_advanced[-301,]
+all_team_advanced <- all_team_advanced[-322,]
+all_team_advanced <- all_team_advanced[-321,]
+all_team_advanced <- all_team_advanced[-342,]
+all_team_advanced <- all_team_advanced[-341,]
+all_team_advanced <- all_team_advanced[-362,]
+all_team_advanced <- all_team_advanced[-361,]
+
+all_team_advanced$`TOV%` <- as.numeric(all_team_advanced$`TOV%`)
+all_team_advanced$`ORB%` <- as.numeric(all_team_advanced$`ORB%`)
+all_team_advanced$FTr <- as.numeric(all_team_advanced$FTr)
+all_team_advanced$ORtg <- as.numeric(all_team_advanced$ORtg)
+
+avg <- mean(all_team_advanced$ORtg)
+
+away_off <- round(away_off,1)
+away_def <- round(away_def,1)
+home_off <- round(home_off,1)
+home_def <- round(home_def,1)
+avg <- round(avg,1)
+```
+
+#get data
+```{r}
+game_data <- get_team_stats(play_by_play_data = get_play_by_play(ncaa_game_id), include_transition = F)
+home_team <- game_data$Home[1]
+away_team <- game_data$Away[1]
+```
+
+#adjust data
+```{r}
+data_h <- game_data %>%
+  filter(Team == home_team) %>%
+  mutate(AdjO = round(ORTG-away_def+avg,1),
+         AdjO_R = 0,
+         AdjD = round(DRTG-away_off+avg,1), 
+         AdjD_R = 0,
+         AdjN = AdjO-AdjD, 
+         Twopt = round((FGM-TPM)/(FGA-TPA)*100,1),
+         Twopt_R = 0,
+         Threept = round(TPM/TPA*100,1), 
+         Threept_R = 0,
+         ThreeptVolume = round(TPA/FGA*100,1), 
+         ThreeptVolume_R = 0, 
+         eFG = round(eFG.*100,1), 
+         eFG_R = 0, 
+         oeFG = round(deFG.*100,1), 
+         oeFG_R = 0,
+         Oreb = round(ORB.*100,1),
+         Oreb_R = 0, 
+         Dreb = round((1-DRB.)*100,1),
+         Dreb_R = 0, 
+         Tov = round(TOrate*100,1), 
+         Tov_R = 0, 
+         oTov = round(dTOrate*100,1), 
+         oTov_R = 0, 
+         FTA = round(FTrate*100,1), 
+         FTA_R = 0, 
+         oFTA = round(dFTrate*100,1), 
+         oFTA_R = 0, 
+         AFGM = round(AST/FGM*100,1), 
+         AFGM_R = 0,
+         PPS = round(((TPM*3)+((FGM-TPM)*2))/FGA,1),
+         PPS_r = 0, 
+         Pace = 48*((oPOSS+dPOSS)/(80)),
+         Pace_r = 0,
+         AstTO = round(AST/TO,1),
+         AstTO_r = 0)%>%
+  select(Team, ORTG, DRTG, NETRTG, AdjO, AdjO_R, AdjD, AdjD_R, AdjN, Twopt, Twopt_R, Threept, Threept_R, ThreeptVolume, ThreeptVolume_R, eFG, eFG_R, oeFG, oeFG_R, Oreb, Oreb_R, Dreb, Dreb_R, Tov, Tov_R, oTov, oTov_R, FTA, FTA_R, oFTA, oFTA_R, AFGM, AFGM_R, PPS, PPS_r, Pace, Pace_r, AstTO, AstTO_r)
+
+data_a <- game_data %>%
+  filter(Team == away_team) %>%
+  mutate(AdjO = round(ORTG-away_def+avg,1),
+         AdjO_R = 0,
+         AdjD = round(DRTG-away_off+avg,1), 
+         AdjD_R = 0,
+         AdjN = AdjO-AdjD, 
+         Twopt = round((FGM-TPM)/(FGA-TPA)*100,1),
+         Twopt_R = 0,
+         Threept = round(TPM/TPA*100,1), 
+         Threept_R = 0,
+         ThreeptVolume = round(TPA/FGA*100,1), 
+         ThreeptVolume_R = 0, 
+         eFG = round(eFG.*100,1), 
+         eFG_R = 0, 
+         oeFG = round(deFG.*100,1), 
+         oeFG_R = 0,
+         Oreb = round(ORB.*100,1),
+         Oreb_R = 0, 
+         Dreb = round((1-DRB.)*100,1),
+         Dreb_R = 0, 
+         Tov = round(TOrate*100,1), 
+         Tov_R = 0, 
+         oTov = round(dTOrate*100,1), 
+         oTov_R = 0, 
+         FTA = round(FTrate*100,1), 
+         FTA_R = 0, 
+         oFTA = round(dFTrate*100,1), 
+         oFTA_R = 0, 
+         AFGM = round(AST/FGM*100,1), 
+         AFGM_R = 0,
+         PPS = round(((TPM*3)+((FGM-TPM)*2))/FGA,1),
+         PPS_r = 0,
+         Pace = 48*((oPOSS+dPOSS)/(80)),
+         Pace_r = 0,
+         AstTO = round(AST/TO,1),
+         AstTO_r = 0) %>%
+  select(Team, ORTG, DRTG, NETRTG, AdjO, AdjO_R, AdjD, AdjD_R, AdjN, Twopt, Twopt_R, Threept, Threept_R, ThreeptVolume, ThreeptVolume_R, eFG, eFG_R, oeFG, oeFG_R, Oreb, Oreb_R, Dreb, Dreb_R, Tov, Tov_R, oTov, oTov_R, FTA, FTA_R, oFTA, oFTA_R, AFGM, AFGM_R, PPS, PPS_r, Pace, Pace_r, AstTO, AstTO_r)
+```
+
+#advanced numbers
+```{r}
+advanced_numbers_h <- advanced_numbers
+advanced_numbers_a <- advanced_numbers
+
+advanced_numbers_h[nrow(advanced_numbers_h) +1,] <- c(data_h$Team, data_h$eFG, data_h$eFG_R, data_h$Oreb, data_h$Oreb_R, data_h$Dreb, data_h$Dreb_R, data_h$Tov, data_h$Tov_R, data_h$PPS, data_h$PPS_r, data_h$ORTG, data_h$AdjO_R, data_h$DRTG, data_h$AdjD_R, data_h$NETRTG, data_h$AdjO_R, data_h$Pace, data_h$Pace_r, data_h$AstTO, data_h$AstTO_r, data_h$FTA, data_h$FTA_R, data_h$Threept, data_h$Threept_R, data_h$ThreeptVolume, data_h$ThreeptVolume_R, data_h$Twopt, data_h$Twopt_R, data_h$AFGM, data_h$AFGM_R)
+advanced_numbers_h[,2:31]<- as.numeric(unlist(advanced_numbers_h[,2:31]))
+
+advanced_numbers_a[nrow(advanced_numbers_a) +1,] <- c(data_a$Team, data_a$eFG, data_a$eFG_R, data_a$Oreb, data_a$Oreb_R, data_a$Dreb, data_a$Dreb_R, data_a$Tov, data_a$Tov_R, data_a$PPS, data_a$PPS_r, data_a$ORTG, data_a$AdjO_R, data_a$DRTG, data_a$AdjD_R, data_a$NETRTG, data_a$AdjO_R, data_a$Pace, data_a$Pace_r, data_a$AstTO, data_a$AstTO_r, data_a$FTA, data_a$FTA_R, data_a$Threept, data_a$Threept_R, data_a$ThreeptVolume, data_a$ThreeptVolume_R, data_a$Twopt, data_a$Twopt_R, data_a$AFGM, data_a$AFGM_R)
+advanced_numbers_a[,2:31]<- as.numeric(unlist(advanced_numbers_a[,2:31]))
+```
+
+#get ranks
+```{r}
+advanced_numbers_h <- advanced_numbers_h %>%
+  mutate(eFG_r = round(rank(desc(eFG)),0), 
+         ORB_r = round(rank(desc(ORB)),0), 
+         DRB_r = round(rank(desc(DRB)),0), 
+         TOV_r = round(rank(sort(TOV)),0), 
+         PPS_r = round(rank(desc(PPS)),0), 
+         ORtg_r = round(rank(desc(ORtg)),0), 
+         DRtg_r = round(rank(desc(DRtg)),0), 
+         NetRtg_r = round(rank(desc(NetRtg)),0), 
+         Pace_r = round(rank(desc(Pace)),0), 
+         AstTO_r = round(rank(desc(AstTO)),0), 
+         FTr_r = round(rank(desc(FTr)),0), 
+         three_perc_r = round(rank(desc(three_perc)),0), 
+         three_attempt_r = round(rank(desc(three_attempt)),0), 
+         two_perc_r = round(rank(desc(two_perc)),0), 
+         AFGM_r = round(rank(desc(AFGM)),0)) %>%
+  filter(Team == home_team) %>%
+  select(eFG, eFG_r, ORB, ORB_r, DRB, DRB_r, TOV, TOV_r, PPS, PPS_r, ORtg, ORtg_r, DRtg, DRtg_r, NetRtg, NetRtg_r, Pace, Pace_r, AstTO, AstTO_r, FTr, FTr_r, three_perc, three_perc_r, three_attempt, three_attempt_r, two_perc, two_perc_r, AFGM, AFGM_r)
+
+advanced_numbers_a <- advanced_numbers_a %>%
+  mutate(eFG_r = round(rank(desc(eFG)),0), 
+         ORB_r = round(rank(desc(ORB)),0), 
+         DRB_r = round(rank(desc(DRB)),0), 
+         TOV_r = round(rank(sort(TOV)),0), 
+         PPS_r = round(rank(desc(PPS)),0), 
+         ORtg_r = round(rank(desc(ORtg)),0), 
+         DRtg_r = round(rank(desc(DRtg)),0), 
+         NetRtg_r = round(rank(desc(NetRtg)),0), 
+         Pace_r = round(rank(desc(Pace)),0), 
+         AstTO_r = round(rank(desc(AstTO)),0), 
+         FTr_r = round(rank(desc(FTr)),0), 
+         three_perc_r = round(rank(desc(three_perc)),0), 
+         three_attempt_r = round(rank(desc(three_attempt)),0), 
+         two_perc_r = round(rank(desc(two_perc)),0), 
+         AFGM_r = round(rank(desc(AFGM)),0)) %>%
+  filter(Team == away_team) %>%
+  select(eFG, eFG_r, ORB, ORB_r, DRB, DRB_r, TOV, TOV_r, PPS, PPS_r, ORtg, ORtg_r, DRtg, DRtg_r, NetRtg, NetRtg_r, Pace, Pace_r, AstTO, AstTO_r, FTr, FTr_r, three_perc, three_perc_r, three_attempt, three_attempt_r, two_perc, two_perc_r, AFGM, AFGM_r)
+```
+
+#make final frame
+```{r}
+df_h <- data.frame(Stat = c('Net Rating','Offensive Rating', 'Defensive Rating', 'Pace', 'Pts/FGA', 'eFG%', '2pt %', '3pt %', '3pt/FGA', 'FTA/FGA', 'OReb%', 'DReb%', 'Tov%', 'Ast/TO', 'Ast/FGM'),
+                   Number = c(round(advanced_numbers_h$NetRtg,1), round(advanced_numbers_h$ORtg,1), round(advanced_numbers_h$DRtg,1), round(advanced_numbers_h$Pace,1), round(advanced_numbers_h$PPS,1), round(advanced_numbers_h$eFG,1), round(advanced_numbers_h$two_perc,1), round(advanced_numbers_h$three_perc,1), round(advanced_numbers_h$three_attempt,1), round(advanced_numbers_h$FTr,1), round(advanced_numbers_h$ORB,1), round(advanced_numbers_h$DRB,1), round(advanced_numbers_h$TOV,1), round(advanced_numbers_h$AstTO,1), round(advanced_numbers_h$AFGM,1)),
+                   Rank = c(advanced_numbers_h$NetRtg_r, advanced_numbers_h$ORtg_r, advanced_numbers_h$DRtg_r, advanced_numbers_h$Pace_r, advanced_numbers_h$PPS_r, advanced_numbers_h$eFG_r, advanced_numbers_h$two_perc_r, advanced_numbers_h$three_perc_r, advanced_numbers_h$three_attempt_r, advanced_numbers_h$FTr_r, advanced_numbers_h$ORB_r, advanced_numbers_h$DRB_r, advanced_numbers_h$TOV_r, advanced_numbers_h$AstTO_r, advanced_numbers_h$AFGM_r),
+                   Description = c('Offensive rating minus defensive rating', 'Points per 100 possessions', 'Points allowed per 100 possessions', 'Total number of possessions', 'Points scored per shot attempt', 'FG% with 3s weighted 1.5x more than 2s', 'Field goal percentage on 2-pointers', 'Field goal percentage on 3-pointers', '% of total shots that are 3-pointers', 'Free throw attempts per 100 FGA', '% of rebounds grabbed by the offense', '% of rebounds grabbed by the defense', '% os possessions that end in a turnover', 'Assist to turnover ratio', '% of made field goals that are assisted'))
+
+df_a <- data.frame(Stat = c('Net Rating','Offensive Rating', 'Defensive Rating', 'Pace', 'Pts/FGA', 'eFG%', '2pt %', '3pt %', '3pt/FGA', 'FTA/FGA', 'OReb%', 'DReb%', 'Tov%', 'Ast/TO', 'Ast/FGM'),
+                   Number = c(round(advanced_numbers_a$NetRtg,1), round(advanced_numbers_a$ORtg,1), round(advanced_numbers_a$DRtg,1), round(advanced_numbers_a$Pace,1), round(advanced_numbers_a$PPS,1), round(advanced_numbers_a$eFG,1), round(advanced_numbers_a$two_perc,1), round(advanced_numbers_a$three_perc,1), round(advanced_numbers_a$three_attempt,1), round(advanced_numbers_a$FTr,1), round(advanced_numbers_a$ORB,1), round(advanced_numbers_a$DRB,1), round(advanced_numbers_a$TOV,1), round(advanced_numbers_a$AstTO,1), round(advanced_numbers_a$AFGM,1)),
+                   Rank = c(advanced_numbers_a$NetRtg_r, advanced_numbers_a$ORtg_r, advanced_numbers_a$DRtg_r, advanced_numbers_a$Pace_r, advanced_numbers_a$PPS_r, advanced_numbers_a$eFG_r, advanced_numbers_a$two_perc_r, advanced_numbers_a$three_perc_r, advanced_numbers_a$three_attempt_r, advanced_numbers_a$FTr_r, advanced_numbers_a$ORB_r, advanced_numbers_a$DRB_r, advanced_numbers_a$TOV_r, advanced_numbers_a$AstTO_r, advanced_numbers_a$AFGM_r),
+                   Description = c('Offensive rating minus defensive rating', 'Points per 100 possessions', 'Points allowed per 100 possessions', 'Total number of possessions', 'Points scored per shot attempt', 'FG% with 3s weighted 1.5x more than 2s', 'Field goal percentage on 2-pointers', 'Field goal percentage on 3-pointers', '% of total shots that are 3-pointers', 'Free throw attempts per 100 FGA', '% of rebounds grabbed by the offense', '% of rebounds grabbed by the defense', '% os possessions that end in a turnover', 'Assist to turnover ratio', '% of made field goals that are assisted'))
+```
+
+#tables
+```{r}
+table_h <- df_h %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(Stat = md('**Stat**'), Number = md('**#**'), Rank = md('**NCAA Rank**'), Description = md('**Description**')) %>%
+  tab_header(title = paste0(NCAA_Home, ' Advanced Numbers'), subtitle = subtitle) %>%
+  data_color(columns = vars(Rank),colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn",direction  = -1) %>% as.character(),domain = c(364,0),na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gt_add_divider(Stat) %>%
+  gtsave(save_name1)
+
+table_a <- df_a %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(Stat = md('**Stat**'), Number = md('**#**'), Rank = md('**NCAA Rank**'), Description = md('**Description**')) %>%
+  tab_header(title = paste0(NCAA_Away, ' Advanced Numbers'), subtitle = subtitle) %>%
+  data_color(columns = vars(Rank),colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn",direction  = -1) %>% as.character(),domain = c(364,0),na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gt_add_divider(Stat) %>%
+  gtsave(save_name2)
+```
+

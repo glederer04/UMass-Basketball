@@ -1,0 +1,70 @@
+---
+title: "PBP_Season_Scraper"
+author: "Greg"
+date: "2023-05-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(bigballR)
+library(gamezoneR)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
+```
+
+#IDs
+```{r}
+team_ids <- teamids
+team_ids <- team_ids %>% filter(Season == "2022-23")
+```
+
+#schedule
+```{r}
+schedule <- get_team_schedule(team.name = team_ids$Team[1], season = "2022-23")
+```
+
+#make id data
+```{r}
+for (i in 2:358){
+  ids <- get_team_schedule(team.name = team_ids$Team[i], season = "2022-23")
+  schedule <- rbind(schedule, ids)
+}
+```
+
+#total schedule data
+```{r}
+total_schedule <- schedule
+total_schedule <- total_schedule %>%
+  filter(Home %in% team_ids$Team,
+         Away %in% team_ids$Team)
+
+total_schedule <- unique( total_schedule[ , c('Game_ID') ] )
+all_ids <- data.frame(total_schedule = total_schedule)
+```
+
+#play by play loop
+```{r}
+pbp <- get_play_by_play(all_ids$total_schedule[1])
+
+for (i in 3001:5710) {
+  data <- get_play_by_play(all_ids$total_schedule[i])
+  if (ncol(data) == 35) {
+    pbp <- rbind(pbp, data)  
+  }
+  print(i)
+}
+
+stats <- get_player_stats(play_by_play_data = pbp, multi.games = T)
+stats_t <- get_team_stats(play_by_play_data = pbp)
+```
+
+#save
+```{r}
+write.csv(stats, "/Users/gregorylederer/Desktop/Umass Basketball/22-23 Player PBP Data.csv", row.names = FALSE)
+write.csv(stats_t, "/Users/gregorylederer/Desktop/Umass Basketball/22-23 Team PBP Data.csv", row.names = FALSE)
+```
+

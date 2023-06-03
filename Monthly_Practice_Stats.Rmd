@@ -1,0 +1,213 @@
+---
+title: "Monthly_Practice_Data"
+author: "Greg"
+date: "2023-05-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(dplyr)
+library(gtExtras)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball/Visuals')
+```
+
+#get data
+```{r}
+practice_data <- read.csv("CodeStatSheet - Sheet1.csv")
+```
+
+#inputs
+```{r}
+month <- 'January'
+table_subtitle <- paste0(month, " | Complete Totals")
+table_subtitle_a <- paste0(month, " | Advanced Totals")
+save_name1 <- paste0(month, " - Complete Totals Stat Sheet.png")
+save_name2 <- paste0(month, " - Basic Totals Stat Sheet.png")
+save_name3 <- paste0(month, " - Advanced Totals Stat Sheet.png")
+```
+
+#full data
+```{r}
+practice_data[is.na(practice_data)] = 0
+
+full_practice_data <- practice_data %>%
+  mutate(Rim_Per = round(Rim_Make/(Rim_Make+Rim_Miss)*100, 1),
+         Mid_Per = round(Mid_Make/(Mid_Make+Mid_Miss)*100, 1),
+         Three_Per = round(Three_Make/(Three_Make+Three_Miss)*100,1),
+         Rim = paste0(Rim_Make, "/", Rim_Make+Rim_Miss),
+         Mid = paste0(Mid_Make, "/", Mid_Make+Mid_Miss),
+         Three = paste0(Three_Make, "/", Three_Make+Three_Miss),
+         Reb = Off_Reb+Def_Reb) %>%
+  select(url, Player, Pts, Reb, Ast, Rim, Rim_Per, Mid, Mid_Per, Three, Three_Per, Off_Reb, Def_Reb, Stl, Blk, Tov, Charges, Fouls) %>%
+  arrange(desc(Pts))
+
+full_practice_data[is.na(full_practice_data)] = 0
+```
+
+#full totals row
+```{r}
+full_totals_row <- c('https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/UMass_Amherst_athletics_logo.svg/1200px-UMass_Amherst_athletics_logo.svg.png',
+                "Totals",
+                sum(practice_data$Pts),
+                sum(practice_data$Off_Reb)+sum(practice_data$Def_Reb),
+                sum(practice_data$Ast),
+                paste0(sum(practice_data$Rim_Make), "/", sum(practice_data$Rim_Make)+sum(practice_data$Rim_Miss)),
+                round(sum(practice_data$Rim_Make)/(sum(practice_data$Rim_Make)+sum(practice_data$Rim_Miss))*100,1),
+                paste0(sum(practice_data$Mid_Make), "/", sum(practice_data$Mid_Make)+sum(practice_data$Mid_Miss)),
+                round(sum(practice_data$Mid_Make)/(sum(practice_data$Mid_Make)+sum(practice_data$Mid_Miss))*100,1),
+                paste0(sum(practice_data$Three_Make), "/", sum(practice_data$Three_Make)+sum(practice_data$Three_Miss)),
+                round(sum(practice_data$Three_Make)/(sum(practice_data$Three_Make)+sum(practice_data$Three_Miss))*100,1),
+                sum(practice_data$Off_Reb),
+                sum(practice_data$Def_Reb),
+                sum(practice_data$Stl),
+                sum(practice_data$Blk),
+                sum(practice_data$Tov),
+                sum(practice_data$Charges),
+                sum(practice_data$Fouls)
+                )
+full_practice_data[nrow(full_practice_data) + 1,] <- full_totals_row
+
+full_practice_data$Rim_Per = as.numeric(as.character(full_practice_data$Rim_Per))
+full_practice_data$Mid_Per = as.numeric(as.character(full_practice_data$Mid_Per))
+full_practice_data$Three_Per = as.numeric(as.character(full_practice_data$Three_Per))
+```
+
+#basic practice data
+```{r}
+basic_practice_data <- practice_data %>%
+  mutate(Two = paste0(Rim_Make+Mid_Make, "/", Rim_Make+Rim_Miss+Mid_Make+Mid_Miss),
+         Two_Per = round((Rim_Make+Mid_Make)/(Rim_Make+Rim_Miss+Mid_Make+Mid_Miss)*100,1),
+         Reb = Off_Reb+Def_Reb,
+         Three_Per = round(Three_Make/(Three_Make+Three_Miss)*100,1),
+         Three = paste0(Three_Make, "/", Three_Make+Three_Miss)
+         ) %>%
+  select(url, Player, Pts, Reb, Ast, Two, Two_Per, Three, Three_Per, Off_Reb, Def_Reb, Stl, Blk, Tov, Fouls) %>%
+  arrange(desc(Pts))
+
+basic_practice_data[is.na(basic_practice_data)] <- 0
+```
+
+#basic totals row
+```{r}
+basic_totals_row <- c('https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/UMass_Amherst_athletics_logo.svg/1200px-UMass_Amherst_athletics_logo.svg.png', "Totals", 
+                sum(basic_practice_data$Pts), 
+                sum(practice_data$Off_Reb)+sum(practice_data$Def_Reb), 
+                sum(basic_practice_data$Ast), 
+                paste0(sum(practice_data$Rim_Make)+sum(practice_data$Mid_Make), "/", sum(practice_data$Rim_Make)+sum(practice_data$Mid_Make)+sum(practice_data$Rim_Miss)+sum(practice_data$Mid_Miss)),
+                round((sum(practice_data$Rim_Make)+sum(practice_data$Mid_Make))/(sum(practice_data$Rim_Make)+sum(practice_data$Mid_Make)+sum(practice_data$Rim_Miss)+sum(practice_data$Mid_Miss))*100,1),
+                paste0(sum(practice_data$Three_Make), "/", sum(practice_data$Three_Make)+sum(practice_data$Three_Miss)),
+                round(sum(practice_data$Three_Make)/(sum(practice_data$Three_Make)+sum(practice_data$Three_Miss))*100,1),
+                sum(basic_practice_data$Off_Reb), 
+                sum(basic_practice_data$Def_Reb), 
+                sum(basic_practice_data$Stl), 
+                sum(basic_practice_data$Blk), 
+                sum(basic_practice_data$Tov), 
+                sum(basic_practice_data$Fouls)
+                )
+basic_practice_data[nrow(basic_practice_data) + 1,] <- basic_totals_row
+```
+
+#advanced data
+```{r}
+advanced_data <- practice_data %>%
+  mutate(Rim_par = round(((Rim_Make+Rim_Miss)/(Rim_Make+Rim_Miss+Mid_Make+Mid_Miss+Three_Make+Three_Miss))*100, 1),
+         Mid_par = round(((Mid_Make+Mid_Miss)/(Rim_Make+Rim_Miss+Mid_Make+Mid_Miss+Three_Make+Three_Miss))*100, 1),
+         Three_par = round(((Three_Make+Three_Miss)/(Rim_Make+Rim_Miss+Mid_Make+Mid_Miss+Three_Make+Three_Miss))*100, 1),
+         eFG = round((((Rim_Make+Mid_Make+Three_Make)+(0.5*Three_Make))/(Rim_Make+Rim_Miss+Mid_Make+Mid_Miss+Three_Make+Three_Miss))*100,1),
+         Rim = paste0(Rim_Make, "/", Rim_Make+Rim_Miss),
+         Mid = paste0(Mid_Make, "/", Mid_Make+Mid_Miss),
+         Three = paste0(Three_Make, "/", Three_Make+Three_Miss)) %>%
+  select(url, Player, Pts, eFG, Rim, Rim_par, Mid, Mid_par, Three, Three_par) %>%
+  arrange(desc(Pts))
+advanced_data[is.na(advanced_data)] <- 0
+```
+
+#advanced total row
+```{r}
+advanced_totals_row <- c('https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/UMass_Amherst_athletics_logo.svg/1200px-UMass_Amherst_athletics_logo.svg.png', "Totals", 
+                sum(practice_data$Pts), 
+                round((((sum(practice_data$Rim_Make)+sum(practice_data$Mid_Make)+sum(practice_data$Three_Make))+(0.5*sum(practice_data$Three_Make)))/(sum(practice_data$Rim_Make)+sum(practice_data$Rim_Miss)+sum(practice_data$Mid_Make)+sum(practice_data$Mid_Miss)+sum(practice_data$Three_Make)+sum(practice_data$Three_Miss)))*100,1),
+                paste0(sum(practice_data$Rim_Make), "/", sum(practice_data$Rim_Make)+sum(practice_data$Rim_Miss)),
+                round(((sum(practice_data$Rim_Make)+sum(practice_data$Rim_Miss))/(sum(practice_data$Rim_Make)+sum(practice_data$Rim_Miss)+sum(practice_data$Mid_Make)+sum(practice_data$Mid_Miss)+sum(practice_data$Three_Make)+sum(practice_data$Three_Miss)))*100,1),
+                paste0(sum(practice_data$Mid_Make), "/", sum(practice_data$Mid_Make)+sum(practice_data$Mid_Miss)),
+                round(((sum(practice_data$Mid_Make)+sum(practice_data$Mid_Miss))/(sum(practice_data$Rim_Make)+sum(practice_data$Rim_Miss)+sum(practice_data$Mid_Make)+sum(practice_data$Mid_Miss)+sum(practice_data$Three_Make)+sum(practice_data$Three_Miss)))*100,1),
+                paste0(sum(practice_data$Three_Make), "/", sum(practice_data$Three_Make)+sum(practice_data$Three_Miss)),
+                round(((sum(practice_data$Three_Make)+sum(practice_data$Three_Miss))/(sum(practice_data$Rim_Make)+sum(practice_data$Rim_Miss)+sum(practice_data$Mid_Make)+sum(practice_data$Mid_Miss)+sum(practice_data$Three_Make)+sum(practice_data$Three_Miss)))*100,1))
+
+advanced_data[nrow(advanced_data) + 1,] <- advanced_totals_row
+
+advanced_data$eFG = as.numeric(as.character(advanced_data$eFG))
+```
+
+#full practice table
+```{r}
+full_practice_table <- full_practice_data %>%
+  gt() %>%
+  gt_theme_538() %>%
+  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14), fill = 'gray94', font_weight = 'normal', font_color = 'gray30') %>%
+  gt_highlight_rows(rows = c(16), fill = 'gray77') %>%
+  cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Rim = md('**Rim**'), Rim_Per = md('**Rim%**'), Mid = md('**Mid**'), Mid_Per = md('**Mid%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Charges = md('**Charges**'), Fouls = md('**Fouls**')) %>%
+  tab_header(title = md('**Practice Stat Sheet**'), subtitle = table_subtitle) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  data_color(columns = c(Rim_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Mid_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Three_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+  gt_add_divider(Ast) %>%
+  gt_add_divider(Rim_Per) %>%
+  gt_add_divider(Mid_Per) %>%
+  gt_add_divider(Three_Per) %>%
+  tab_options(column_labels.font.size = 13) %>%
+  cols_align(align = c('center'), columns = vars(Pts, Reb, Ast, Rim, Rim_Per, Mid, Mid_Per, Three, Three_Per, Off_Reb, Def_Reb, Stl, Blk, Tov, Charges, Fouls)) %>%
+  gtsave(save_name1)
+```
+
+#basic practice table
+```{r}
+basic_practice_table <- basic_practice_data %>%
+  gt() %>%
+  gt_theme_538() %>%
+  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14), fill = 'gray94', font_weight = 'normal', font_color = 'gray30') %>%
+  gt_highlight_rows(rows = c(16), fill = 'gray77') %>%
+  cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Two = md('**2pt.**'), Two_Per = md('**2pt%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Fouls = md('**Fouls**')) %>%
+  tab_header(title = md('**Practice Stat Sheet**'), subtitle = table_subtitle) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+  cols_align(align = c('center'), columns = vars(Pts, Two, Two_Per, Three, Three_Per, Off_Reb, Def_Reb, Reb, Ast, Stl, Blk, Tov, Fouls)) %>%
+  gt_add_divider(Ast) %>%
+  gt_add_divider(Two_Per) %>%
+  gt_add_divider(Three_Per) %>%
+  gtsave(save_name2)
+```
+
+#advanced table
+```{r}
+advanced_table <- advanced_data %>%
+  gt() %>%
+  gt_theme_538() %>%
+  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14), fill = 'gray94', font_weight = 'normal', font_color = 'gray30') %>%
+  gt_highlight_rows(rows = c(16), fill = 'gray77') %>%
+  cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), eFG = md('**eFG%**'), Rim = md('**Rim**'), Rim_par = md('**Rim Attempts**'), Mid = md('**Mid**'), Mid_par = md('**Mid Attempts**'), Three = md('**Three**'), Three_par = md('**Three Attempts**')) %>%
+  tab_header(title = md('**Advanced Stat Sheet**'), subtitle = table_subtitle_a) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+  gt_add_divider(eFG) %>%
+  gt_add_divider(Rim_par) %>%
+  gt_add_divider(Mid_par) %>%
+  tab_source_note(source_note = md('*x Attempts is the rate of each shot attempted per 100 FGA*')) %>%
+  cols_align(align = c('center'), columns = vars(Pts, eFG, Rim, Rim_par, Mid, Mid_par, Three, Three_par)) %>%
+  data_color(columns = c(eFG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  gtsave(save_name3)
+```
+

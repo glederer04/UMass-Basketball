@@ -1,0 +1,162 @@
+---
+title: "Team_Profile"
+author: "Greg"
+date: "2023-05-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(toRvik)
+library(tidyr)
+library(tidyverse)
+library(bigballR)
+library(ncaahoopR)
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(dplyr)
+library(gtExtras)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
+```
+
+#inputs
+```{r}
+NCAA_team <- 'Massachusetts' #dict$NCAA
+save_name1 <- paste0(NCAA_team, ' Team Info.png')
+save_name2 <- paste0(NCAA_team, ' Four Factors.png')
+save_name3 <- paste0(NCAA_team, ' Shooting.png')
+```
+
+
+#get stats
+```{r}
+team_stats <- bart_team_box(year = 2022)
+teams <- bart_teams(year = 2022, conf = NULL)
+basic_stats <- team_stats %>%
+  filter(team %in% c(teams$team)) %>%
+  select(team, wins, losses)
+```
+
+#fix shoting
+```{r}
+team_shooting <- bart_team_shooting(year = 2022, conf = NULL, team = NULL)
+team_shooting <- separate(team_shooting, col = close_fg, into = c('rim_makes', 'rim_attempts'), sep = '-')
+team_shooting <- separate(team_shooting, col = far_fg, into = c('mid_makes', 'mid_attempts'), sep = '-')
+team_shooting <- separate(team_shooting, col = three_fg, into = c('three_makes', 'three_attempts'), sep = '-')
+team_shooting <- separate(team_shooting, col = close_fg_d, into = c('rim_makes_d', 'rim_attempts_d'), sep = '-')
+team_shooting <- separate(team_shooting, col = far_fg_d, into = c('mid_makes_d', 'mid_attempts_d'), sep = '-')
+team_shooting <- separate(team_shooting, col = three_fg_d, into = c('three_makes_d', 'three_attempts_d'), sep = '-')
+team_shooting[c('rim_makes', 'rim_attempts', 'mid_makes', 'mid_attempts', 'three_makes', 'three_attempts', 'rim_makes_d', 'rim_attempts_d', 'mid_makes_d', 'mid_attempts_d', 'three_makes_d', 'three_attempts_d')] <- lapply(team_shooting[c('rim_makes', 'rim_attempts', 'mid_makes', 'mid_attempts', 'three_makes', 'three_attempts', 'rim_makes_d', 'rim_attempts_d', 'mid_makes_d', 'mid_attempts_d', 'three_makes_d', 'three_attempts_d')],as.numeric)
+```
+
+#shooting data
+```{r}
+team_shooting <- team_shooting %>%
+  filter(team %in% c(teams$team)) %>%
+  mutate(rim_per = rim_makes/rim_attempts,
+         mid_per = mid_makes/mid_attempts,
+         three_per = three_makes/three_attempts,
+         rim_per_d = rim_makes_d/rim_attempts_d,
+         mid_per_d = mid_makes_d/mid_attempts_d,
+         three_per_d = three_makes_d/three_attempts_d,
+         rim_per_rank = round(rank(desc(rim_per)),0),
+         mid_per_rank = round(rank(desc(mid_per)),0),
+         three_per_rank = round(rank(desc(three_per)),0),
+         rim_per_d_rank = round(rank(desc(rim_per_d)),0),
+         mid_per_d_rank = round(rank(desc(mid_per_d)),0),
+         three_per_d_rank = round(rank(desc(three_per_d)),0),
+         rim_a_rank = round(rank(desc(close_share)),0),
+         mid_a_rank = round(rank(desc(far_share)),0),
+         three_a_rank = round(rank(desc(three_share)),0),
+         rim_a_d_rank = round(rank(desc(close_share_d)),0),
+         mid_a_d_rank = round(rank(desc(far_share_d)),0),
+         three_a_d_rank = round(rank(desc(three_share_d)),0)) %>%
+  select(team, close_share, rim_a_rank, rim_per, rim_per_rank, far_share, mid_a_rank, mid_per, mid_per_rank, three_share, three_a_rank, three_per, three_per_rank, close_share_d, rim_a_d_rank, rim_per_d, rim_per_d_rank, far_share_d, mid_a_d_rank, mid_per_d, mid_per_d_rank, three_share_d, three_a_d_rank, three_per_d, three_per_d_rank) %>%
+  filter(team == NCAA_team)
+team_shooting[nrow(team_shooting) + 1,] <-  list("Offense", team_shooting$close_share[1], team_shooting$rim_a_rank[1], round(team_shooting$rim_per[1]*100,1), team_shooting$rim_per_rank[1], team_shooting$far_share[1], team_shooting$mid_a_rank[1], round(team_shooting$mid_per[1]*100), team_shooting$mid_per_rank[1], team_shooting$three_share[1], team_shooting$three_a_rank[1], round(team_shooting$three_per[1]*100), team_shooting$three_per_rank[1],0,0,0,0,0,0,0,0,0,0,0,0)
+team_shooting[nrow(team_shooting) + 1,] <-  list("Defense", team_shooting$close_share_d[1], team_shooting$rim_a_d_rank[1], round(team_shooting$rim_per_d[1]*100,1), team_shooting$rim_per_d_rank[1], team_shooting$far_share_d[1], team_shooting$mid_a_d_rank[1], round(team_shooting$mid_per_d[1]*100,1), team_shooting$mid_per_d_rank[1], team_shooting$three_share_d[1], team_shooting$three_a_d_rank[1], round(team_shooting$three_per_d[1]*100,1), team_shooting$three_per_d_rank[1],0,0,0,0,0,0,0,0,0,0,0,0)
+team_shooting <- team_shooting %>%
+  slice(2:3) %>%
+  select(team, close_share, rim_a_rank, rim_per, rim_per_rank, far_share, mid_a_rank, mid_per, mid_per_rank, three_share, three_a_rank, three_per, three_per_rank)
+```
+
+#four factors
+```{r}
+team_four_factors <- bart_factors(year = 2022)
+team_four_factors <- team_four_factors %>%
+  mutate(off_efg_rank = round(rank(desc(off_efg)),0),
+         off_to_rank = round(rank(desc(off_to)),0),
+         off_or_rank = round(rank(desc(off_or)),0),
+         off_ftr_rank = round(rank(desc(off_ftr)),0),
+         def_efg_rank = round(rank(desc(def_efg)),0),
+         def_to_rank = round(rank(desc(def_to)),0),
+         def_or_rank = round(rank(desc(def_or)),0),
+         def_ftr_rank = round(rank(desc(def_ftr)),0),) %>%
+  select(team, off_efg, off_efg_rank, off_to, off_to_rank, off_or, off_or_rank, off_ftr, off_ftr_rank, def_efg, def_efg_rank, def_to, def_to_rank, def_or, def_or_rank, def_ftr, def_ftr_rank) %>%
+  filter(team == NCAA_team)
+team_four_factors[nrow(team_four_factors)+1,] <- list("Offense", team_four_factors$off_efg[1], team_four_factors$off_efg_rank[1], team_four_factors$off_to[1], team_four_factors$off_to_rank[1], team_four_factors$off_or[1], team_four_factors$off_or_rank[1], team_four_factors$off_ftr[1], team_four_factors$off_ftr_rank[1],0,0,0,0,0,0,0,0)
+team_four_factors[nrow(team_four_factors)+1,] <- list("Defense", team_four_factors$def_efg[1], team_four_factors$def_efg_rank[1], team_four_factors$def_to[1], team_four_factors$def_to_rank[1], team_four_factors$def_or[1], team_four_factors$def_or_rank[1], team_four_factors$def_ftr[1], team_four_factors$def_ftr_rank[1],0,0,0,0,0,0,0,0)
+team_four_factors <- team_four_factors %>%
+  slice(2:3) %>%
+  select(team, off_efg, off_efg_rank, off_to, off_to_rank, off_or, off_or_rank, off_ftr, off_ftr_rank)
+```
+
+#team rating
+```{r}
+team_rating <- bart_ratings(year = 2022)
+team_rating <- team_rating %>%
+  mutate(SOS = round(rank(desc(ov_cur_sos)),0)) %>%
+  filter(team == NCAA_team) %>%
+  select(team, conf, barthag_rk, adj_o_rk, adj_d_rk, SOS)
+basic_stats_t <- basic_stats %>% filter(team==NCAA_team)
+team_rating <- cbind(basic_stats_t, team_rating)
+team_rating <- subset(team_rating, select = -c(team))
+team_rating <- subset(team_rating, select = -c(team))
+```
+
+#team rating table
+```{r}
+team_rating_table <- team_rating %>%
+  gt() %>%
+  cols_label(wins = md('**Wins**'), losses = md('**Losses**'), conf = md('**Conf.**'), barthag_rk = md('**Rank**'), adj_o_rk = md('**Offense**'), adj_d_rk = md('**Defense**'), SOS = md('**SOS**')) %>%
+  tab_header(title = md('**Team Info**')) %>%
+  gt_theme_538() %>%
+  data_color(columns = vars(barthag_rk, adj_o_rk, adj_d_rk, SOS), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = -1) %>% as.character(), domain = c(358,0), na.color = "#00441BFF")) %>%
+  opt_align_table_header(align = 'center') %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89', table.border.bottom.color = 'gray89', table.border.top.color = 'gray89', table.border.right.color = 'gray89', table.border.left.color = 'gray89') %>%
+  gtsave(save_name1)
+```
+
+#four factor table
+```{r}
+four_factor_table <- team_four_factors %>%
+  gt() %>%
+  cols_label(team = md('**O/D**'), off_efg = md('**eFG%**'), off_efg_rank = md('**Rank**'), off_to = md('**Tov%**'), off_to_rank = md('**Rank**'), off_or = md('**Reb%**'), off_or_rank = md('**Rank**'), off_ftr = md('**FTr**'), off_ftr_rank = md('**Rank**')) %>%
+  tab_header(title = md('**Four Factors**')) %>%
+  gt_theme_538() %>%
+  data_color(columns = vars(off_efg_rank, off_to_rank, off_or_rank, off_ftr_rank), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = -1) %>% as.character(), domain = c(358,0), na.color = "#00441BFF")) %>%
+  opt_align_table_header(align = 'center') %>%
+  gt_add_divider(team) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89', table.border.bottom.color = 'gray89', table.border.top.color = 'gray89', table.border.right.color = 'gray89', table.border.left.color = 'gray89') %>%
+  gtsave(save_name2)
+```
+
+#shooting table
+```{r}
+shooting_table <- team_shooting %>%
+  gt() %>%
+  cols_label(team = md('**O/D**'), close_share = md('**Rim**'), rim_a_rank = md('**Rank**'), rim_per = md('**Rim%**'), rim_per_rank = md('**Rank**'), far_share = md('**Mid**'), mid_a_rank = md('**Rank**'), mid_per = md('**Mid%**'), mid_per_rank = md('**Rank**'), three_share = md('**3PA**'), three_a_rank = md('**Rank**'), three_per = md('**3P%**'), three_per_rank = md('**Rank**')) %>%
+  tab_header(title = md('**Shooting**')) %>%
+  gt_theme_538() %>%
+  data_color(columns = vars(rim_a_rank, rim_per_rank, mid_a_rank, mid_per_rank, three_a_rank, three_per_rank), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = -1) %>% as.character(), domain = c(358,0), na.color = "#00441BFF")) %>%
+  opt_align_table_header(align = 'center') %>%
+  gt_add_divider(team) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(save_name3)
+```
+

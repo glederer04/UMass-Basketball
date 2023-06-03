@@ -1,0 +1,776 @@
+---
+title: "Master_PostGame"
+author: "Greg"
+date: "2023-06-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#packages
+```{r}
+library(hoopR)
+library(toRvik)
+library(bigballR)
+library(ncaahoopR)
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(gtExtras)
+library(dplyr)
+library(rvest)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
+```
+
+#inputs
+```{r}
+espn_game_id <- 401514221 #espn.com
+ncaa_game_id <- 5472625 #stats.ncaa.org | play by play
+ESPN_Away <- 'UMass' #dict$ESPN
+ESPN_Home <- 'Richmond' #dict$ESPN
+NCAA_Away <- 'Massachusetts' #dict$NCAA
+NCAA_Home <- 'Richmond' #dict$NCAA
+day <- 'March 7th, 2023'
+save_name1 <- paste0(NCAA_Away, ' vs. ', NCAA_Home, ' Game Flow.png')
+save_name2 <- paste0(NCAA_Away, ' vs. ', NCAA_Home, ' Win Probability.png')
+save_name3 <- paste0(NCAA_Away, ' vs. ', NCAA_Home, ' General Stats.png')
+save_name4 <- paste0(NCAA_Away, ' vs. ', NCAA_Home, ' Overview & Four Factors.png')
+save_name5 <- paste0(NCAA_Away, ' vs. ', NCAA_Home, ' Shooting Percentages.png')
+save_name6 <- paste0(NCAA_Away, ' vs. ', NCAA_Home, ' Shot Locations.png')
+save_name7 <- paste0(NCAA_Home, ' Advanced Team Stats vs. ', NCAA_Away, ' .png')
+save_name8 <- paste0(NCAA_Away, ' Advanced Team Stats vs. ', NCAA_Home, ' .png')
+save_name9 <- paste0(NCAA_Away, ' Basic Stats vs. ', NCAA_Home, '.png')
+save_name10 <- paste0(NCAA_Home, ' Basic Stats vs. ', NCAA_Away, '.png')
+save_name11 <- paste0(NCAA_Away, ' Shooting Stats vs. ', NCAA_Home, '.png')
+save_name12 <- paste0(NCAA_Home, ' Shooting Stats vs. ', NCAA_Away, '.png')
+save_name13 <- paste0(NCAA_Away, ' Advanced Stats vs. ', NCAA_Home, '.png')
+save_name14 <- paste0(NCAA_Home, ' Advanced Stats vs. ', NCAA_Away, '.png')
+save_name15 <- paste0(NCAA_Away, ' Lineups vs. ', NCAA_Home, '.png')
+save_name16 <- paste0(NCAA_Home, ' Lineups vs. ', NCAA_Away, '.png')
+subtitle <- paste0(day, ' | ', NCAA_Away, ' vs. ', NCAA_Home)
+full_player_stats <- read.csv('/Users/gregorylederer/Desktop/Umass Basketball/22-23 Player PBP Data.csv')
+total_data <- read.csv('/Users/gregorylederer/Desktop/Umass Basketball/22-23 Team PBP Data.csv')
+advanced_numbers <- read.csv('/Users/gregorylederer/Desktop/Umass Basketball/22-23 Advanced Team Stats.csv')
+```
+
+#game flow & win prob
+```{r}
+#color and image
+colors_a <- ncaa_colors %>%
+  filter(ncaa_name == NCAA_Away)
+away_color <- colors_a$primary_color
+away_team_url <- colors_a$logo_url
+
+colors_h <- ncaa_colors %>%
+  filter(ncaa_name == NCAA_Home)
+home_color <- colors_h$primary_color
+home_team_url <- colors_h$logo_url
+
+url <- c(away_team_url, home_team_url)
+
+ggsave(filename = save_name1, plot = ncaahoopR::game_flow(espn_game_id, home_color, away_color), width = 7, height = 5, dpi = 300, limitsize = F)
+ggsave(filename = save_name2, plot = ncaahoopR::wp_chart_new(espn_game_id, home_color, away_color, include_spread = T, show_labels = T), width = 7, height = 5, dpi = 300, limitsize = F)
+```
+
+#team profiles
+```{r}
+#ORtg and DRtg
+rtgs <- bart_factors(year = 2022)
+
+rtgs_a <- rtgs %>%
+  filter(team == NCAA_Away)
+away_off <- rtgs_a$adj_o
+away_def <- rtgs_a$adj_d
+
+rtgs_h <- rtgs %>%
+  filter(team == NCAA_Home)
+home_off <- rtgs_a$adj_o
+home_def <- rtgs_a$adj_d
+
+url3 <- paste0('https://www.sports-reference.com/cbb/seasons/men/', '2023', '-advanced-school-stats.html')
+webpage3 <- read_html(url3)
+all_team_advanced <- webpage3 %>%
+  html_table()
+all_team_advanced <- data.frame(all_team_advanced)
+
+all_team_advanced <- subset(all_team_advanced, select = -c(Var.1, Var.9, Var.12, Var.15, Var.18, Var.21))
+colnames(all_team_advanced) <- all_team_advanced[1,]
+all_team_advanced <- all_team_advanced[-1,]
+colnames(all_team_advanced)[8] = 'Conf_W'
+colnames(all_team_advanced)[9] = 'Conf_L'
+colnames(all_team_advanced)[10] = 'Home_W'
+colnames(all_team_advanced)[11] = 'Home_L'
+colnames(all_team_advanced)[12] = 'Away_W'
+colnames(all_team_advanced)[13] = 'Away_L'
+colnames(all_team_advanced)[14] = 'Tm_Pts'
+colnames(all_team_advanced)[15] = 'Opp_Pts'
+all_team_advanced <- all_team_advanced[-22,]
+all_team_advanced <- all_team_advanced[-21,]
+all_team_advanced <- all_team_advanced[-42,]
+all_team_advanced <- all_team_advanced[-41,]
+all_team_advanced <- all_team_advanced[-62,]
+all_team_advanced <- all_team_advanced[-61,]
+all_team_advanced <- all_team_advanced[-82,]
+all_team_advanced <- all_team_advanced[-81,]
+all_team_advanced <- all_team_advanced[-102,]
+all_team_advanced <- all_team_advanced[-101,]
+all_team_advanced <- all_team_advanced[-122,]
+all_team_advanced <- all_team_advanced[-121,]
+all_team_advanced <- all_team_advanced[-142,]
+all_team_advanced <- all_team_advanced[-141,]
+all_team_advanced <- all_team_advanced[-162,]
+all_team_advanced <- all_team_advanced[-161,]
+all_team_advanced <- all_team_advanced[-182,]
+all_team_advanced <- all_team_advanced[-181,]
+all_team_advanced <- all_team_advanced[-202,]
+all_team_advanced <- all_team_advanced[-201,]
+all_team_advanced <- all_team_advanced[-222,]
+all_team_advanced <- all_team_advanced[-221,]
+all_team_advanced <- all_team_advanced[-242,]
+all_team_advanced <- all_team_advanced[-241,]
+all_team_advanced <- all_team_advanced[-262,]
+all_team_advanced <- all_team_advanced[-261,]
+all_team_advanced <- all_team_advanced[-282,]
+all_team_advanced <- all_team_advanced[-281,]
+all_team_advanced <- all_team_advanced[-302,]
+all_team_advanced <- all_team_advanced[-301,]
+all_team_advanced <- all_team_advanced[-322,]
+all_team_advanced <- all_team_advanced[-321,]
+all_team_advanced <- all_team_advanced[-342,]
+all_team_advanced <- all_team_advanced[-341,]
+all_team_advanced <- all_team_advanced[-362,]
+all_team_advanced <- all_team_advanced[-361,]
+
+all_team_advanced$`TOV%` <- as.numeric(all_team_advanced$`TOV%`)
+all_team_advanced$`ORB%` <- as.numeric(all_team_advanced$`ORB%`)
+all_team_advanced$FTr <- as.numeric(all_team_advanced$FTr)
+all_team_advanced$ORtg <- as.numeric(all_team_advanced$ORtg)
+
+avg <- mean(all_team_advanced$ORtg)
+
+away_off <- round(away_off,1)
+away_def <- round(away_def,1)
+home_off <- round(home_off,1)
+home_def <- round(home_def,1)
+avg <- round(avg,1)
+
+#stats and roster
+player_stats <- get_player_stats(play_by_play_data = get_play_by_play(ncaa_game_id), multi.games = F, simple = F)
+
+away_roster <- ncaahoopR::get_roster(ESPN_Away, season = '2022-23')
+away_roster <- away_roster %>%
+  mutate(Jersey = number) %>%
+  select(Jersey, player_image)
+away_roster <- merge(away_roster, get_team_roster(season = '2022-23', team.name = player_stats$Away[1]), by = 'Jersey')
+
+home_roster <- ncaahoopR::get_roster(ESPN_Home, season = '2022-23')
+home_roster <- home_roster %>%
+  mutate(Jersey = number) %>%
+  select(Jersey, player_image)
+home_roster <- merge(home_roster, get_team_roster(season = '2022-23', team.name = player_stats$Home[1]), by = 'Jersey')
+
+team_stats <- get_team_stats(play_by_play_data = get_play_by_play(ncaa_game_id), include_transition = T)
+
+#team stats
+team_stats <- team_stats %>%
+  mutate(TP. = TPM/TPA)
+
+team_stats <- team_stats %>%
+  mutate(off_rtg_perc = round(pnorm((ORTG-mean(total_data$ORTG))/sd(total_data$ORTG)),2),
+         efg_perc = round(pnorm((eFG.-mean(total_data$eFG.))/sd(total_data$eFG.)),2),
+         tov_perc = round(pnorm((TOrate-mean(total_data$TOrate))/sd(total_data$TOrate)),2),
+         OReb_perc = round(pnorm((ORB.-mean(total_data$ORB.))/sd(total_data$ORB.)),2),
+         FTR_perc = round(pnorm((FTrate-mean(total_data$FTrate))/sd(total_data$FTrate)),2),
+         layup_perc = round(pnorm((RIMrate-mean(total_data$RIMrate))/sd(total_data$RIMrate)),2),
+         jumper_perc = round(pnorm((MIDrate-mean(total_data$MIDrate))/sd(total_data$MIDrate)),2),
+         three_pointer_perc = round(pnorm((TPrate-mean(total_data$TPrate))/sd(total_data$TPrate)),2),
+         layup_per_perc = round(pnorm((RIM.-mean(total_data$RIM.))/sd(total_data$RIM.)),2),
+         jumper_per_perc = round(pnorm((MID.-mean(total_data$MID.))/sd(total_data$MID.)),2),
+         three_pointer_per_perc = round(pnorm((TP.-mean(total_data$TPP))/sd(total_data$TPP)),2),
+         score = PTS,
+         poss = oPOSS,
+         off_rtg = round(ORTG,1),
+         halfcourt = (1-oTransPCT),
+         halfcourt_rtg = round(ORTG_half,1),
+         trans = oTransPCT,
+         trans_rtg = round(ORTG_trans,1),
+         team = Team,
+         efg = round(eFG.*100,1),
+         tov = round(TO/oPOSS*100,1),
+         OReb = round(ORB.*100,1),
+         FTR = round(FTrate*100,1),
+         layup_tot = paste0(RIMM, "/", RIMA),
+         layup_per = round(RIM.*100,1),
+         jumper_tot = paste0(FGM-RIMM-TPM, "/", FGA-RIMA-TPA),
+         jumper_per = (round((FGM-RIMM-TPM)/(FGA-RIMA-TPA)*100,1)),
+         three_pointer_tot = paste0(TPM,"/",TPA),
+         three_pointer_per = round(TPM/TPA*100,1),
+         layup = round(RIMrate*100,1),
+         jumper = round(MIDrate*100,1),
+         three_pointer = round(TPrate*100,1),
+         team = Team,
+         url=url)
+
+#split them up
+overview <- team_stats %>%
+  select(url, team, score, poss, off_rtg, off_rtg_perc, halfcourt, halfcourt_rtg, trans, trans_rtg)
+overview <- overview[,-1:-3]
+
+general <- team_stats %>%
+  select(url, team, efg, efg_perc, tov, tov_perc, OReb, OReb_perc, FTR, FTR_perc)
+general <- general[,-1:-3]
+
+shot_per <- team_stats %>%
+  select(url, team, layup_tot, layup_per, layup_per_perc, jumper_tot, jumper_per, jumper_per_perc, three_pointer_tot, three_pointer_per, three_pointer_per_perc)
+shot_per <- shot_per[,-1:-3]
+
+shot_loc <- team_stats %>%
+  select(url, team, layup, layup_perc, jumper, jumper_perc, three_pointer, three_pointer_perc)
+shot_loc <- shot_loc[,-1:-3]
+
+#overview table
+overview_table <- overview %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(url = '', team = '', score = md('**Score**'), poss = md('**Possessions**'), off_rtg = md('**Rtg.**'), off_rtg_perc = md('**%ile**'), halfcourt = md('**%**'), halfcourt_rtg = md('**Rtg.**'), trans = md('**%**'), trans_rtg = md('**Rtg.**')) %>%
+  tab_header(title = md('**General**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_spanner(label = 'Total', columns = vars(poss, off_rtg, off_rtg_perc)) %>%
+  tab_spanner(label = 'Halfcourt', columns = vars(halfcourt, halfcourt_rtg)) %>%
+  tab_spanner(label = 'Transition', columns = vars(trans, trans_rtg)) %>%
+  fmt_percent(columns = vars(off_rtg_perc, halfcourt, trans), decimals = 0) %>%
+  data_color(columns = vars(off_rtg_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(0,1), na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gt_add_divider(off_rtg_perc) %>%
+  gt_add_divider(halfcourt_rtg) %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gtsave(save_name3)
+
+#general table
+general_table <- general %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(url = '', team = '', efg = '', efg_perc = '', tov = '', tov_perc = '', OReb = '', OReb_perc = '', FTR = '', FTR_perc = '') %>%
+  tab_header(title = md('**Overview & Four Factors**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_spanner(label = 'eFG%', columns = vars(efg, efg_perc)) %>%
+  tab_spanner(label = 'TOV%', columns = vars(tov, tov_perc)) %>%
+  tab_spanner(label = 'OReb%', columns = vars(OReb, OReb_perc)) %>%
+  tab_spanner(label = 'FTr', columns = vars(FTR, FTR_perc)) %>%
+  fmt_percent(columns = vars(efg_perc, tov_perc, OReb_perc, FTR_perc), decimals = 0) %>%
+  data_color(columns = vars(efg_perc, tov_perc, OReb_perc, FTR_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(0,1), na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gt_add_divider(efg_perc) %>%
+  gt_add_divider(tov_perc) %>%
+  gt_add_divider(OReb_perc) %>%
+  gtsave(save_name4)
+
+#shot per table
+shot_per_table <- shot_per %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(url = '', team = '', layup_tot = '', layup_per = '', layup_per_perc = '', jumper_tot = '', jumper_per = '', jumper_per_perc = '', three_pointer_tot = '', three_pointer_per = '', three_pointer_per_perc = '') %>%
+  tab_header(title = md('**Shooting Percentages**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_spanner(label = 'Layups', columns = vars(layup_tot, layup_per, layup_per_perc)) %>%
+  tab_spanner(label = 'Midrange', columns = vars(jumper_tot, jumper_per, jumper_per_perc)) %>%
+  tab_spanner(label = '3-Pointers', columns = vars(three_pointer_tot, three_pointer_per, three_pointer_per_perc)) %>%
+  fmt_percent(columns = vars(layup_per_perc, jumper_per_perc, three_pointer_per_perc), decimals = 0) %>%
+  data_color(columns = vars(layup_per_perc, jumper_per_perc, three_pointer_per_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(0,1), na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gt_add_divider(layup_per_perc) %>%
+  gt_add_divider(jumper_per_perc) %>%
+  gt_add_divider(three_pointer_per_perc) %>%
+  gtsave(save_name5)
+
+#shot loc table
+shot_loc_table <- shot_loc %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(url = '', team = '', layup = '', layup_perc = '', jumper = '', jumper_perc = '', three_pointer = '', three_pointer_perc = '') %>%
+  tab_header(title = md('**Shot Locations**')) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_spanner(label = 'Layups', columns = vars(layup, layup_perc)) %>%
+  tab_spanner(label = 'Midrange', columns = vars(jumper, jumper_perc)) %>%
+  tab_spanner(label = '3-Pointers', columns = vars(three_pointer, three_pointer_perc)) %>%
+  fmt_percent(columns = vars(layup_perc, jumper_perc, three_pointer_perc), decimals = 0) %>%
+  data_color(columns = vars(layup_perc, jumper_perc, three_pointer_perc), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(0,1), na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gt_add_divider(layup_perc) %>%
+  gt_add_divider(jumper_perc) %>%
+  gtsave(save_name6)
+```
+
+#advanced tables
+```{r}
+#get data
+game_data <- get_team_stats(play_by_play_data = get_play_by_play(ncaa_game_id), include_transition = F)
+home_team <- game_data$Home[1]
+away_team <- game_data$Away[1]
+
+#adjust data
+data_h <- game_data %>%
+  filter(Team == home_team) %>%
+  mutate(AdjO = round(ORTG-away_def+avg,1),
+         AdjO_R = 0,
+         AdjD = round(DRTG-away_off+avg,1), 
+         AdjD_R = 0,
+         AdjN = AdjO-AdjD, 
+         Twopt = round((FGM-TPM)/(FGA-TPA)*100,1),
+         Twopt_R = 0,
+         Threept = round(TPM/TPA*100,1), 
+         Threept_R = 0,
+         ThreeptVolume = round(TPA/FGA*100,1), 
+         ThreeptVolume_R = 0, 
+         eFG = round(eFG.*100,1), 
+         eFG_R = 0, 
+         oeFG = round(deFG.*100,1), 
+         oeFG_R = 0,
+         Oreb = round(ORB.*100,1),
+         Oreb_R = 0, 
+         Dreb = round((1-DRB.)*100,1),
+         Dreb_R = 0, 
+         Tov = round(TOrate*100,1), 
+         Tov_R = 0, 
+         oTov = round(dTOrate*100,1), 
+         oTov_R = 0, 
+         FTA = round(FTrate*100,1), 
+         FTA_R = 0, 
+         oFTA = round(dFTrate*100,1), 
+         oFTA_R = 0, 
+         AFGM = round(AST/FGM*100,1), 
+         AFGM_R = 0,
+         PPS = round(((TPM*3)+((FGM-TPM)*2))/FGA,1),
+         PPS_r = 0, 
+         Pace = 48*((oPOSS+dPOSS)/(80)),
+         Pace_r = 0,
+         AstTO = round(AST/TO,1),
+         AstTO_r = 0)%>%
+  select(Team, ORTG, DRTG, NETRTG, AdjO, AdjO_R, AdjD, AdjD_R, AdjN, Twopt, Twopt_R, Threept, Threept_R, ThreeptVolume, ThreeptVolume_R, eFG, eFG_R, oeFG, oeFG_R, Oreb, Oreb_R, Dreb, Dreb_R, Tov, Tov_R, oTov, oTov_R, FTA, FTA_R, oFTA, oFTA_R, AFGM, AFGM_R, PPS, PPS_r, Pace, Pace_r, AstTO, AstTO_r)
+
+data_a <- game_data %>%
+  filter(Team == away_team) %>%
+  mutate(AdjO = round(ORTG-away_def+avg,1),
+         AdjO_R = 0,
+         AdjD = round(DRTG-away_off+avg,1), 
+         AdjD_R = 0,
+         AdjN = AdjO-AdjD, 
+         Twopt = round((FGM-TPM)/(FGA-TPA)*100,1),
+         Twopt_R = 0,
+         Threept = round(TPM/TPA*100,1), 
+         Threept_R = 0,
+         ThreeptVolume = round(TPA/FGA*100,1), 
+         ThreeptVolume_R = 0, 
+         eFG = round(eFG.*100,1), 
+         eFG_R = 0, 
+         oeFG = round(deFG.*100,1), 
+         oeFG_R = 0,
+         Oreb = round(ORB.*100,1),
+         Oreb_R = 0, 
+         Dreb = round((1-DRB.)*100,1),
+         Dreb_R = 0, 
+         Tov = round(TOrate*100,1), 
+         Tov_R = 0, 
+         oTov = round(dTOrate*100,1), 
+         oTov_R = 0, 
+         FTA = round(FTrate*100,1), 
+         FTA_R = 0, 
+         oFTA = round(dFTrate*100,1), 
+         oFTA_R = 0, 
+         AFGM = round(AST/FGM*100,1), 
+         AFGM_R = 0,
+         PPS = round(((TPM*3)+((FGM-TPM)*2))/FGA,1),
+         PPS_r = 0,
+         Pace = 48*((oPOSS+dPOSS)/(80)),
+         Pace_r = 0,
+         AstTO = round(AST/TO,1),
+         AstTO_r = 0) %>%
+  select(Team, ORTG, DRTG, NETRTG, AdjO, AdjO_R, AdjD, AdjD_R, AdjN, Twopt, Twopt_R, Threept, Threept_R, ThreeptVolume, ThreeptVolume_R, eFG, eFG_R, oeFG, oeFG_R, Oreb, Oreb_R, Dreb, Dreb_R, Tov, Tov_R, oTov, oTov_R, FTA, FTA_R, oFTA, oFTA_R, AFGM, AFGM_R, PPS, PPS_r, Pace, Pace_r, AstTO, AstTO_r)
+
+#advanced numbers
+advanced_numbers_h <- advanced_numbers
+advanced_numbers_a <- advanced_numbers
+
+advanced_numbers_h[nrow(advanced_numbers_h) +1,] <- c(data_h$Team, data_h$eFG, data_h$eFG_R, data_h$Oreb, data_h$Oreb_R, data_h$Dreb, data_h$Dreb_R, data_h$Tov, data_h$Tov_R, data_h$PPS, data_h$PPS_r, data_h$ORTG, data_h$AdjO_R, data_h$DRTG, data_h$AdjD_R, data_h$NETRTG, data_h$AdjO_R, data_h$Pace, data_h$Pace_r, data_h$AstTO, data_h$AstTO_r, data_h$FTA, data_h$FTA_R, data_h$Threept, data_h$Threept_R, data_h$ThreeptVolume, data_h$ThreeptVolume_R, data_h$Twopt, data_h$Twopt_R, data_h$AFGM, data_h$AFGM_R)
+advanced_numbers_h[,2:31]<- as.numeric(unlist(advanced_numbers_h[,2:31]))
+
+advanced_numbers_a[nrow(advanced_numbers_a) +1,] <- c(data_a$Team, data_a$eFG, data_a$eFG_R, data_a$Oreb, data_a$Oreb_R, data_a$Dreb, data_a$Dreb_R, data_a$Tov, data_a$Tov_R, data_a$PPS, data_a$PPS_r, data_a$ORTG, data_a$AdjO_R, data_a$DRTG, data_a$AdjD_R, data_a$NETRTG, data_a$AdjO_R, data_a$Pace, data_a$Pace_r, data_a$AstTO, data_a$AstTO_r, data_a$FTA, data_a$FTA_R, data_a$Threept, data_a$Threept_R, data_a$ThreeptVolume, data_a$ThreeptVolume_R, data_a$Twopt, data_a$Twopt_R, data_a$AFGM, data_a$AFGM_R)
+advanced_numbers_a[,2:31]<- as.numeric(unlist(advanced_numbers_a[,2:31]))
+
+#get ranks
+advanced_numbers_h <- advanced_numbers_h %>%
+  mutate(eFG_r = round(rank(desc(eFG)),0), 
+         ORB_r = round(rank(desc(ORB)),0), 
+         DRB_r = round(rank(desc(DRB)),0), 
+         TOV_r = round(rank(sort(TOV)),0), 
+         PPS_r = round(rank(desc(PPS)),0), 
+         ORtg_r = round(rank(desc(ORtg)),0), 
+         DRtg_r = round(rank(desc(DRtg)),0), 
+         NetRtg_r = round(rank(desc(NetRtg)),0), 
+         Pace_r = round(rank(desc(Pace)),0), 
+         AstTO_r = round(rank(desc(AstTO)),0), 
+         FTr_r = round(rank(desc(FTr)),0), 
+         three_perc_r = round(rank(desc(three_perc)),0), 
+         three_attempt_r = round(rank(desc(three_attempt)),0), 
+         two_perc_r = round(rank(desc(two_perc)),0), 
+         AFGM_r = round(rank(desc(AFGM)),0)) %>%
+  filter(Team == home_team) %>%
+  select(eFG, eFG_r, ORB, ORB_r, DRB, DRB_r, TOV, TOV_r, PPS, PPS_r, ORtg, ORtg_r, DRtg, DRtg_r, NetRtg, NetRtg_r, Pace, Pace_r, AstTO, AstTO_r, FTr, FTr_r, three_perc, three_perc_r, three_attempt, three_attempt_r, two_perc, two_perc_r, AFGM, AFGM_r)
+
+advanced_numbers_a <- advanced_numbers_a %>%
+  mutate(eFG_r = round(rank(desc(eFG)),0), 
+         ORB_r = round(rank(desc(ORB)),0), 
+         DRB_r = round(rank(desc(DRB)),0), 
+         TOV_r = round(rank(sort(TOV)),0), 
+         PPS_r = round(rank(desc(PPS)),0), 
+         ORtg_r = round(rank(desc(ORtg)),0), 
+         DRtg_r = round(rank(desc(DRtg)),0), 
+         NetRtg_r = round(rank(desc(NetRtg)),0), 
+         Pace_r = round(rank(desc(Pace)),0), 
+         AstTO_r = round(rank(desc(AstTO)),0), 
+         FTr_r = round(rank(desc(FTr)),0), 
+         three_perc_r = round(rank(desc(three_perc)),0), 
+         three_attempt_r = round(rank(desc(three_attempt)),0), 
+         two_perc_r = round(rank(desc(two_perc)),0), 
+         AFGM_r = round(rank(desc(AFGM)),0)) %>%
+  filter(Team == away_team) %>%
+  select(eFG, eFG_r, ORB, ORB_r, DRB, DRB_r, TOV, TOV_r, PPS, PPS_r, ORtg, ORtg_r, DRtg, DRtg_r, NetRtg, NetRtg_r, Pace, Pace_r, AstTO, AstTO_r, FTr, FTr_r, three_perc, three_perc_r, three_attempt, three_attempt_r, two_perc, two_perc_r, AFGM, AFGM_r)
+
+#make final frame
+df_h <- data.frame(Stat = c('Net Rating','Offensive Rating', 'Defensive Rating', 'Pace', 'Pts/FGA', 'eFG%', '2pt %', '3pt %', '3pt/FGA', 'FTA/FGA', 'OReb%', 'DReb%', 'Tov%', 'Ast/TO', 'Ast/FGM'),
+                   Number = c(round(advanced_numbers_h$NetRtg,1), round(advanced_numbers_h$ORtg,1), round(advanced_numbers_h$DRtg,1), round(advanced_numbers_h$Pace,1), round(advanced_numbers_h$PPS,1), round(advanced_numbers_h$eFG,1), round(advanced_numbers_h$two_perc,1), round(advanced_numbers_h$three_perc,1), round(advanced_numbers_h$three_attempt,1), round(advanced_numbers_h$FTr,1), round(advanced_numbers_h$ORB,1), round(advanced_numbers_h$DRB,1), round(advanced_numbers_h$TOV,1), round(advanced_numbers_h$AstTO,1), round(advanced_numbers_h$AFGM,1)),
+                   Rank = c(advanced_numbers_h$NetRtg_r, advanced_numbers_h$ORtg_r, advanced_numbers_h$DRtg_r, advanced_numbers_h$Pace_r, advanced_numbers_h$PPS_r, advanced_numbers_h$eFG_r, advanced_numbers_h$two_perc_r, advanced_numbers_h$three_perc_r, advanced_numbers_h$three_attempt_r, advanced_numbers_h$FTr_r, advanced_numbers_h$ORB_r, advanced_numbers_h$DRB_r, advanced_numbers_h$TOV_r, advanced_numbers_h$AstTO_r, advanced_numbers_h$AFGM_r),
+                   Description = c('Offensive rating minus defensive rating', 'Points per 100 possessions', 'Points allowed per 100 possessions', 'Total number of possessions', 'Points scored per shot attempt', 'FG% with 3s weighted 1.5x more than 2s', 'Field goal percentage on 2-pointers', 'Field goal percentage on 3-pointers', '% of total shots that are 3-pointers', 'Free throw attempts per 100 FGA', '% of rebounds grabbed by the offense', '% of rebounds grabbed by the defense', '% os possessions that end in a turnover', 'Assist to turnover ratio', '% of made field goals that are assisted'))
+
+df_a <- data.frame(Stat = c('Net Rating','Offensive Rating', 'Defensive Rating', 'Pace', 'Pts/FGA', 'eFG%', '2pt %', '3pt %', '3pt/FGA', 'FTA/FGA', 'OReb%', 'DReb%', 'Tov%', 'Ast/TO', 'Ast/FGM'),
+                   Number = c(round(advanced_numbers_a$NetRtg,1), round(advanced_numbers_a$ORtg,1), round(advanced_numbers_a$DRtg,1), round(advanced_numbers_a$Pace,1), round(advanced_numbers_a$PPS,1), round(advanced_numbers_a$eFG,1), round(advanced_numbers_a$two_perc,1), round(advanced_numbers_a$three_perc,1), round(advanced_numbers_a$three_attempt,1), round(advanced_numbers_a$FTr,1), round(advanced_numbers_a$ORB,1), round(advanced_numbers_a$DRB,1), round(advanced_numbers_a$TOV,1), round(advanced_numbers_a$AstTO,1), round(advanced_numbers_a$AFGM,1)),
+                   Rank = c(advanced_numbers_a$NetRtg_r, advanced_numbers_a$ORtg_r, advanced_numbers_a$DRtg_r, advanced_numbers_a$Pace_r, advanced_numbers_a$PPS_r, advanced_numbers_a$eFG_r, advanced_numbers_a$two_perc_r, advanced_numbers_a$three_perc_r, advanced_numbers_a$three_attempt_r, advanced_numbers_a$FTr_r, advanced_numbers_a$ORB_r, advanced_numbers_a$DRB_r, advanced_numbers_a$TOV_r, advanced_numbers_a$AstTO_r, advanced_numbers_a$AFGM_r),
+                   Description = c('Offensive rating minus defensive rating', 'Points per 100 possessions', 'Points allowed per 100 possessions', 'Total number of possessions', 'Points scored per shot attempt', 'FG% with 3s weighted 1.5x more than 2s', 'Field goal percentage on 2-pointers', 'Field goal percentage on 3-pointers', '% of total shots that are 3-pointers', 'Free throw attempts per 100 FGA', '% of rebounds grabbed by the offense', '% of rebounds grabbed by the defense', '% os possessions that end in a turnover', 'Assist to turnover ratio', '% of made field goals that are assisted'))
+
+#tables
+table_h <- df_h %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(Stat = md('**Stat**'), Number = md('**#**'), Rank = md('**NCAA Rank**'), Description = md('**Description**')) %>%
+  tab_header(title = paste0(NCAA_Home, ' Advanced Numbers'), subtitle = subtitle) %>%
+  data_color(columns = vars(Rank),colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn",direction  = -1) %>% as.character(),domain = c(364,0),na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gt_add_divider(Stat) %>%
+  gtsave(save_name7)
+
+table_a <- df_a %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(Stat = md('**Stat**'), Number = md('**#**'), Rank = md('**NCAA Rank**'), Description = md('**Description**')) %>%
+  tab_header(title = paste0(NCAA_Away, ' Advanced Numbers'), subtitle = subtitle) %>%
+  data_color(columns = vars(Rank),colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn",direction  = -1) %>% as.character(),domain = c(364,0),na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  gt_add_divider(Stat) %>%
+  gtsave(save_name8)
+```
+
+#player stats
+```{r}
+#games stats
+player_stats <- get_player_stats(get_play_by_play(ncaa_game_id), multi.games = F, simple = F)
+
+#rosters
+away_roster <- ncaahoopR::get_roster(ESPN_Away, season = '2022-23')
+away_roster <- away_roster %>%
+  mutate(Jersey = number) %>%
+  select(Jersey, player_image)
+away_roster <- merge(away_roster, get_team_roster(season = '2022-23', team.name = player_stats$Away[1]), by = 'Jersey')
+
+home_roster <- ncaahoopR::get_roster(ESPN_Home, season = '2022-23')
+home_roster <- home_roster %>%
+  mutate(Jersey = number) %>%
+  select(Jersey, player_image)
+home_roster <- merge(home_roster, get_team_roster(season = '2022-23', team.name = player_stats$Home[1]), by = 'Jersey')
+
+#basic stats
+away_basic <- player_stats %>%
+  filter(Away == Team) %>%
+  mutate(MINS = round(MINS,1),
+         REB = ORB+DRB,
+         FG = paste0(FGM, '/', FGA),
+         TP = paste0(TPM, '/', TPA),
+         FG. = round(FG.*100,1),
+         TP. = round(TP.*100,1)) %>%
+  select(Player, MINS, PTS, REB, AST, FG, FG., TP, TP., STL, BLK, TOV, PF, ORB, DRB)
+away_basic <- merge(away_basic, away_roster, by = 'Player')
+away_basic <- away_basic %>%
+  select(player_image, CleanName, MINS, PTS, REB, AST, FG, FG., TP, TP., STL, BLK, TOV, PF, ORB, DRB) %>%
+  arrange(desc(MINS))
+
+home_basic <- player_stats %>%
+  filter(Home == Team) %>%
+  mutate(MINS = round(MINS,1),
+         REB = ORB+DRB,
+         FG = paste0(FGM, '/', FGA),
+         TP = paste0(TPM, '/', TPA),
+         FG. = round(FG.*100,1),
+         TP. = round(TP.*100,1)) %>%
+  select(Player, MINS, PTS, REB, AST, FG, FG., TP, TP., STL, BLK, TOV, PF, ORB, DRB)
+home_basic <- merge(home_basic, home_roster, by = 'Player')
+home_basic <- home_basic %>%
+  select(player_image, CleanName, MINS, PTS, REB, AST, FG, FG., TP, TP., STL, BLK, TOV, PF, ORB, DRB) %>%
+  arrange(desc(MINS))
+
+#shooting stats
+away_shooting <- player_stats %>%
+  filter(Away == Team, FGA > 0) %>%
+  mutate(TS. = round(TS.*100,1),
+         eFG. = round(eFG.*100,1),
+         RIM = paste0(RIMM, '/', RIMA),
+         RIM. = round(RIM.*100,1),
+         MID = paste0(MIDM, '/', MIDA),
+         MID. = round(MID.*100,1),
+         TP = paste0(TPM, '/', TPA),
+         TP. = round(TP.*100,1),
+         FT = paste0(FTM, '/', FTA),
+         FT. = round(FT.*100,1)) %>%
+  select(Player, PTS, TS., eFG., RIM, RIM., MID, MID., TP, TP., FT, FT.)
+away_shooting <- merge(away_shooting, away_roster, by = 'Player')
+away_shooting <- away_shooting %>%
+  select(player_image, CleanName, PTS, TS., eFG., RIM, RIM., MID, MID., TP, TP., FT, FT.) %>%
+  arrange(desc(PTS))
+
+home_shooting <- player_stats %>%
+  filter(Home == Team, FGA > 0) %>%
+  mutate(TS. = round(TS.*100,1),
+         eFG. = round(eFG.*100,1),
+         RIM = paste0(RIMM, '/', RIMA),
+         RIM. = round(RIM.*100,1),
+         MID = paste0(MIDM, '/', MIDA),
+         MID. = round(MID.*100,1),
+         TP = paste0(TPM, '/', TPA),
+         TP. = round(TP.*100,1),
+         FT = paste0(FTM, '/', FTA),
+         FT. = round(FT.*100,1)) %>%
+  select(Player, PTS, TS., eFG., RIM, RIM., MID, MID., TP, TP., FT, FT.)
+home_shooting <- merge(home_shooting, home_roster, by = 'Player')
+home_shooting <- home_shooting %>%
+  select(player_image, CleanName, PTS, TS., eFG., RIM, RIM., MID, MID., TP, TP., FT, FT.) %>%
+  arrange(desc(PTS))
+
+#advanced stats
+away_advanced <- player_stats %>%
+  filter(Away == Team, FGA > 0) %>%
+  mutate(Pts_Created = PTS_unast,
+         Created_Prop = round(Pts_Created/PTS*100, 1),
+         Pts_Added = round((((RIM.-mean(full_player_stats$RIM.[full_player_stats$RIMA>=20]))*RIMA + (MID.-mean(full_player_stats$MID.[full_player_stats$MIDA>=20]))*MIDA + (TP.-mean(full_player_stats$TP.[full_player_stats$TPA>=20]))*TPA) + (FT.-mean(full_player_stats$FT.[full_player_stats$FTA>=20]))*FTA),1),
+         SQ = round((mean(full_player_stats$RIM.[full_player_stats$RIMA>=20])*RIMA/FGA + mean(full_player_stats$MID.[full_player_stats$MIDA>=20])*MIDA/FGA + mean(full_player_stats$TP.[full_player_stats$TPA>=20])*TPA/FGA*1.5)*100,1),
+         Shot_Making = round((eFG.*100-SQ),1),
+         Trans_Prop = round(PTS_trans/PTS*100,1),
+         HC_Prop = round(PTS_half/PTS*100,1)) %>%
+  select(Player, Pts_Added, Pts_Created, Created_Prop, SQ, Shot_Making, PTS_trans, Trans_Prop, PTS_half, HC_Prop)
+away_advanced[is.na(away_advanced)] = 0.0
+away_advanced <- merge(away_advanced, away_roster, by="Player")
+away_advanced <- away_advanced %>%
+  select(player_image, CleanName, Pts_Added, Pts_Created, Created_Prop, SQ, Shot_Making,  PTS_trans, Trans_Prop, PTS_half, HC_Prop) %>%
+  arrange(desc(Pts_Added))
+
+home_advanced <- player_stats %>%
+  filter(Home == Team, FGA > 0) %>%
+  mutate(Pts_Created = PTS_unast,
+         Created_Prop = round(Pts_Created/PTS*100, 1),
+         Pts_Added = round((((RIM.-mean(full_player_stats$RIM.[full_player_stats$RIMA>=20]))*RIMA + (MID.-mean(full_player_stats$MID.[full_player_stats$MIDA>=20]))*MIDA + (TP.-mean(full_player_stats$TP.[full_player_stats$TPA>=20]))*TPA) + (FT.-mean(full_player_stats$FT.[full_player_stats$FTA>=20]))*FTA),1),
+         SQ = round((mean(full_player_stats$RIM.[full_player_stats$RIMA>=20])*RIMA/FGA + mean(full_player_stats$MID.[full_player_stats$MIDA>=20])*MIDA/FGA + mean(full_player_stats$TP.[full_player_stats$TPA>=20])*TPA/FGA*1.5)*100,1),
+         Shot_Making = round((eFG.*100-SQ),1),
+         Trans_Prop = round(PTS_trans/PTS*100,1),
+         HC_Prop = round(PTS_half/PTS*100,1)) %>%
+  select(Player, Pts_Added, Pts_Created, Created_Prop, SQ, Shot_Making, PTS_trans, Trans_Prop, PTS_half, HC_Prop)
+home_advanced[is.na(home_advanced)] = 0.0
+home_advanced <- merge(home_advanced, home_roster, by="Player")
+home_advanced <- home_advanced %>%
+  select(player_image, CleanName, Pts_Added, Pts_Created, Created_Prop, SQ, Shot_Making,  PTS_trans, Trans_Prop, PTS_half, HC_Prop) %>%
+  arrange(desc(Pts_Added))
+
+#basic tables
+away_basic_table <- away_basic %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), MINS = md('**Mins**'), PTS = md('**Pts**'), REB = md('**Reb**'), AST = md('**Ast**'), FG = md('**FG**'), FG. = md('**FG%**'), TP = md('**3pt**'), TP. = md('**3pt%**'), STL = md('**Stl**'), BLK = md('**Blk**'), TOV = md('**Tov**'), PF = md('**PF**'), ORB = md('**OReb**'), DRB = md('**DReb**')) %>%
+  tab_header(title = paste0(player_stats$Away[1], ' Basic Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(PTS), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TP.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(FG.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gt_add_divider(AST) %>%
+  gt_add_divider(TP.) %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gtsave(save_name9)
+
+home_basic_table <- home_basic %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), MINS = md('**Mins**'), PTS = md('**Pts**'), REB = md('**Reb**'), AST = md('**Ast**'), FG = md('**FG**'), FG. = md('**FG%**'), TP = md('**3pt**'), TP. = md('**3pt%**'), STL = md('**Stl**'), BLK = md('**Blk**'), TOV = md('**Tov**'), PF = md('**PF**'), ORB = md('**OReb**'), DRB = md('**DReb**')) %>%
+  tab_header(title = paste0(player_stats$Home[1], ' Basic Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(PTS), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TP.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(FG.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gt_add_divider(AST) %>%
+  gt_add_divider(TP.) %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gtsave(save_name10)
+
+#shooting tables
+away_shooting_table <- away_shooting %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), PTS = md('**Pts**'), TS. = md('**TS%**'), eFG. = md('**eFG%**'), RIM = md('**Rim**'), RIM. = md('**Rim%**'), MID = md('**MID**'), MID. = md('**Mid%**'), TP = md('**3pt**'), TP. = md('**3pt%**'), FT = md('**FT**'), FT. = md('**FT%**')) %>%
+  tab_header(title = paste0(player_stats$Away[1], ' Shooting Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(PTS), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TS.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(eFG.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(RIM.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(MID.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TP.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(FT.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gt_add_divider(eFG.) %>%
+  gt_add_divider(RIM.) %>%
+  gt_add_divider(MID.) %>%
+  gt_add_divider(TP.) %>%
+  gtsave(save_name11)
+
+away_shooting_table <- away_shooting %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), PTS = md('**Pts**'), TS. = md('**TS%**'), eFG. = md('**eFG%**'), RIM = md('**Rim**'), RIM. = md('**Rim%**'), MID = md('**MID**'), MID. = md('**Mid%**'), TP = md('**3pt**'), TP. = md('**3pt%**'), FT = md('**FT**'), FT. = md('**FT%**')) %>%
+  tab_header(title = paste0(player_stats$Away[1], ' Shooting Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(PTS), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TS.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(eFG.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(RIM.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(MID.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(TP.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(FT.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gt_add_divider(eFG.) %>%
+  gt_add_divider(RIM.) %>%
+  gt_add_divider(MID.) %>%
+  gt_add_divider(TP.) %>%
+  gtsave(save_name12)
+
+#advanced table
+away_advanced_table <- away_advanced %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), Pts_Added = md('**Points Added**'), Pts_Created = md('**Created Pts**'), Created_Prop = md('**% of Pts Created**'), SQ = md('**Shot Quality**'), Shot_Making = md('**Shot Making**'), PTS_trans = md('**Transition Pts**'), Trans_Prop = md('**% of Pts in Transition**'), PTS_half = md('**Halfcourt Pts**'), HC_Prop = md('**% of Pts in HC**')) %>%
+  tab_header(title = paste0(player_stats$Away[1], ' Advanced Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(Pts_Created), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Shot_Making), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Pts_Added), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gt_add_divider(Shot_Making) %>%
+  gt_add_divider(Trans_Prop) %>%
+  gt_add_divider(Created_Prop) %>%
+  gt_add_divider(Pts_Added) %>%
+  gtsave(save_name13)
+
+home_advanced_table <- home_advanced %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(player_image = '', CleanName = md('**Player**'), Pts_Added = md('**Points Added**'), Pts_Created = md('**Created Pts**'), Created_Prop = md('**% of Pts Created**'), SQ = md('**Shot Quality**'), Shot_Making = md('**Shot Making**'), PTS_trans = md('**Transition Pts**'), Trans_Prop = md('**% of Pts in Transition**'), PTS_half = md('**Halfcourt Pts**'), HC_Prop = md('**% of Pts in HC**')) %>%
+  tab_header(title = paste0(player_stats$Home[1], ' Advanced Stats'), subtitle = subtitle) %>%
+  text_transform(locations = cells_body(vars(player_image)), fn = function(x) {web_image(url = x, height = px(25))}) %>%
+  data_color(columns = c(Pts_Created), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Shot_Making), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Pts_Added), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 25) %>%
+  gt_add_divider(Shot_Making) %>%
+  gt_add_divider(Trans_Prop) %>%
+  gt_add_divider(Created_Prop) %>%
+  gt_add_divider(Pts_Added) %>%
+  gtsave(save_name14)
+```
+
+#lineups
+```{r}
+#data
+lineups <- get_lineups(play_by_play_data = get_play_by_play(ncaa_game_id), include_transition = T)
+
+away_lineups <- lineups %>%
+  filter(Team == NCAA_Away) %>%
+  arrange(desc(Mins)) %>%
+  mutate(ORTG = round(ORTG,1),
+         DRTG = round(DRTG,1),
+         NETRTG = round(NETRTG,1),
+         Mins = round(Mins,0),
+         P1 = sub("^\\S+\\s+", '', gsub(".", " ", P1, fixed=TRUE)),
+         P2 = sub("^\\S+\\s+", '', gsub(".", " ", P2, fixed=TRUE)),
+         P3 = sub("^\\S+\\s+", '', gsub(".", " ", P3, fixed=TRUE)),
+         P4 = sub("^\\S+\\s+", '', gsub(".", " ", P4, fixed=TRUE)),
+         P5 = sub("^\\S+\\s+", '', gsub(".", " ", P5, fixed=TRUE)),
+         Lineup = paste0(P1, " - ", P2," - ", P3," - ", P4," - ", P5)) %>%
+  select(Lineup, Mins, PTS, dPTS, ORTG, DRTG, NETRTG) %>%
+  filter(Mins > 0)
+
+home_lineups <- lineups %>%
+  filter(Team == NCAA_Home) %>%
+  arrange(desc(Mins)) %>%
+  mutate(ORTG = round(ORTG,1),
+         DRTG = round(DRTG,1),
+         NETRTG = round(NETRTG,1),
+         Mins = round(Mins,0),
+         P1 = sub("^\\S+\\s+", '', gsub(".", " ", P1, fixed=TRUE)),
+         P2 = sub("^\\S+\\s+", '', gsub(".", " ", P2, fixed=TRUE)),
+         P3 = sub("^\\S+\\s+", '', gsub(".", " ", P3, fixed=TRUE)),
+         P4 = sub("^\\S+\\s+", '', gsub(".", " ", P4, fixed=TRUE)),
+         P5 = sub("^\\S+\\s+", '', gsub(".", " ", P5, fixed=TRUE)),
+         Lineup = paste0(P1, " - ", P2," - ", P3," - ", P4," - ", P5)) %>%
+  select(Lineup, Mins, PTS, dPTS, ORTG, DRTG, NETRTG) %>%
+  filter(Mins > 0)
+
+#tables
+away_lineup_table <- away_lineups %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(Lineup = md('**Lineup**'), Mins = md('**Mins**'), PTS = md('**Pts**'), dPTS = md('**Opp. Pts**'), ORTG = md('**ORtg.**'), DRTG = md('**DRtg.**'), NETRTG = md('**Net Rtg.**')) %>%
+  tab_header(title = paste0(NCAA_Away, ' Lineups'), subtitle = subtitle) %>%
+  data_color(columns = c(NETRTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(min(lineups$NETRTG),max(lineups$NETRTG)), na.color = "#00441BFF")) %>%
+  data_color(columns = c(ORTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(min(lineups$ORTG),max(lineups$ORTG)), na.color = "#00441BFF")) %>%
+  data_color(columns = c(DRTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(min(lineups$DRTG),max(lineups$DRTG)), na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  cols_align(align = c('center'), columns = vars(Lineup)) %>%
+  gt_add_divider(Mins) %>%
+  gt_add_divider(dPTS) %>%
+  gt_add_divider(DRTG) %>%
+  gtsave(save_name15)
+
+home_lineup_table <- home_lineups %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(Lineup = md('**Lineup**'), Mins = md('**Mins**'), PTS = md('**Pts**'), dPTS = md('**Opp. Pts**'), ORTG = md('**ORtg.**'), DRTG = md('**DRtg.**'), NETRTG = md('**Net Rtg.**')) %>%
+  tab_header(title = paste0(NCAA_Home, ' Lineups'), subtitle = subtitle) %>%
+  data_color(columns = c(NETRTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(min(lineups$NETRTG),max(lineups$NETRTG)), na.color = "#00441BFF")) %>%
+  data_color(columns = c(ORTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(min(lineups$ORTG),max(lineups$ORTG)), na.color = "#00441BFF")) %>%
+  data_color(columns = c(DRTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "RColorBrewer::RdYlGn", direction  = 1) %>% as.character(), domain = c(min(lineups$DRTG),max(lineups$DRTG)), na.color = "#00441BFF")) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30) %>%
+  cols_align(align = c('center'), columns = vars(Lineup)) %>%
+  gt_add_divider(Mins) %>%
+  gt_add_divider(dPTS) %>%
+  gt_add_divider(DRTG) %>%
+  gtsave(save_name16)
+```
+
