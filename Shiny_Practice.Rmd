@@ -1,0 +1,488 @@
+---
+title: "Shiny_Practice"
+author: "Greg"
+date: "2023-07-01"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/23-24 Practice Shiny")
+```
+
+#packages
+
+```{r}
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(dplyr)
+library(gtExtras)
+library(shiny)
+library(shinythemes)
+library(gtsummary)
+library(htmltools)
+library(paletteer)
+library(scales)
+library(shinydashboard)
+library(shinyjs)
+library(ggsci)
+library(shinyWidgets)
+library(here)
+library(rsconnect)
+```
+
+#get data and file names
+```{r}
+data <- read.csv("/Users/gregorylederer/Desktop/UMass Basketball/CodeStatSheet - Sheet1.csv")
+save_name1 <- paste0(format(Sys.Date(), format = "%Y-%m-%d"), ' | Complete Practice Totals.rds')
+save_name2 <- paste0(format(Sys.Date(), format = "%Y-%m-%d"), ' | Basic Practice Totals.rds')
+```
+#inputs
+
+```{r}
+table_subtitle <- paste0(format(Sys.Date(), format="%B %d, %Y"), " | Complete Totals")
+```
+
+#full data
+
+```{r}
+data[is.na(data)] = 0
+
+full_practice_data <- data %>%
+  mutate(Rim_Per = round(Rim_Make/(Rim_Make+Rim_Miss)*100, 1),
+         Mid_Per = round(Mid_Make/(Mid_Make+Mid_Miss)*100, 1),
+         Three_Per = round(Three_Make/(Three_Make+Three_Miss)*100,1),
+         Rim = paste0(Rim_Make, "/", Rim_Make+Rim_Miss),
+         Mid = paste0(Mid_Make, "/", Mid_Make+Mid_Miss),
+         Three = paste0(Three_Make, "/", Three_Make+Three_Miss),
+         Reb = Off_Reb+Def_Reb) %>%
+  select(url, Player, Pts, Reb, Ast, Rim, Rim_Per, Mid, Mid_Per, Three, Three_Per, Off_Reb, Def_Reb, Stl, Blk, Tov, Charges, Fouls)
+
+full_practice_data[is.na(full_practice_data)] = 0
+```
+
+#full totals row
+
+```{r}
+totals_row <- c('https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/UMass_Amherst_athletics_logo.svg/1200px-UMass_Amherst_athletics_logo.svg.png',
+                "Totals",
+                sum(data$Pts),
+                sum(data$Off_Reb)+sum(data$Def_Reb),
+                sum(data$Ast),
+                paste0(sum(data$Rim_Make), "/", sum(data$Rim_Make)+sum(data$Rim_Miss)),
+                round(sum(data$Rim_Make)/(sum(data$Rim_Make)+sum(data$Rim_Miss))*100,1),
+                paste0(sum(data$Mid_Make), "/", sum(data$Mid_Make)+sum(data$Mid_Miss)),
+                round(sum(data$Mid_Make)/(sum(data$Mid_Make)+sum(data$Mid_Miss))*100,1),
+                paste0(sum(data$Three_Make), "/", sum(data$Three_Make)+sum(data$Three_Miss)),
+                round(sum(data$Three_Make)/(sum(data$Three_Make)+sum(data$Three_Miss))*100,1),
+                sum(data$Off_Reb),
+                sum(data$Def_Reb),
+                sum(data$Stl),
+                sum(data$Blk),
+                sum(data$Tov),
+                sum(data$Charges),
+                sum(data$Fouls)
+                )
+full_practice_data[nrow(full_practice_data) + 1,] <- totals_row
+
+full_practice_data$Rim_Per = as.numeric(as.character(full_practice_data$Rim_Per))
+full_practice_data$Mid_Per = as.numeric(as.character(full_practice_data$Mid_Per))
+full_practice_data$Three_Per = as.numeric(as.character(full_practice_data$Three_Per))
+```
+
+#basic practice data
+
+```{r}
+basic_practice_data <- data %>%
+  mutate(Two = paste0(Rim_Make+Mid_Make, "/", Rim_Make+Rim_Miss+Mid_Make+Mid_Miss),
+         Two_Per = round((Rim_Make+Mid_Make)/(Rim_Make+Rim_Miss+Mid_Make+Mid_Miss)*100,1),
+         Reb = Off_Reb+Def_Reb,
+         Three_Per = round(Three_Make/(Three_Make+Three_Miss)*100,1),
+         Three = paste0(Three_Make, "/", Three_Make+Three_Miss),
+         ) %>%
+  select(url, Player, Pts, Reb, Ast, Two, Two_Per, Three, Three_Per, Off_Reb, Def_Reb, Stl, Blk, Tov, Fouls)
+
+basic_practice_data[is.na(basic_practice_data)] <- 0
+```
+
+#basic totals row
+
+```{r}
+totals_row <- c('https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/UMass_Amherst_athletics_logo.svg/1200px-UMass_Amherst_athletics_logo.svg.png', "Totals", 
+                sum(basic_practice_data$Pts), 
+                sum(data$Off_Reb)+sum(data$Def_Reb), 
+                sum(basic_practice_data$Ast), 
+                paste0(sum(data$Rim_Make)+sum(data$Mid_Make), "/", sum(data$Rim_Make)+sum(data$Mid_Make)+sum(data$Rim_Miss)+sum(data$Mid_Miss)),
+                round((sum(data$Rim_Make)+sum(data$Mid_Make))/(sum(data$Rim_Make)+sum(data$Mid_Make)+sum(data$Rim_Miss)+sum(data$Mid_Miss))*100,1),
+                paste0(sum(data$Three_Make), "/", sum(data$Three_Make)+sum(data$Three_Miss)),
+                round(sum(data$Three_Make)/(sum(data$Three_Make)+sum(data$Three_Miss))*100,1),
+                sum(basic_practice_data$Off_Reb), 
+                sum(basic_practice_data$Def_Reb), 
+                sum(basic_practice_data$Stl), 
+                sum(basic_practice_data$Blk), 
+                sum(basic_practice_data$Tov), 
+                sum(basic_practice_data$Fouls)
+                )
+basic_practice_data[nrow(basic_practice_data) + 1,] <- totals_row
+```
+
+#full practice table
+
+```{r}
+full_practice_table <- full_practice_data %>%
+  gt() %>%
+  gt_theme_538() %>%
+  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14), fill = 'gray94', font_weight = 'normal', font_color = 'gray30') %>%
+  gt_highlight_rows(rows = c(16), fill = 'gray77') %>%
+  cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Rim = md('**Rim**'), Rim_Per = md('**Rim%**'), Mid = md('**Mid**'), Mid_Per = md('**Mid%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Charges = md('**Charges**'), Fouls = md('**Fouls**')) %>%
+  tab_header(title = md('**Practice Stat Sheet**'), subtitle = table_subtitle) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  data_color(columns = c(Rim_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Mid_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  data_color(columns = c(Three_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+  gt_add_divider(Ast) %>%
+  gt_add_divider(Rim_Per) %>%
+  gt_add_divider(Mid_Per) %>%
+  gt_add_divider(Three_Per) %>%
+  tab_options(column_labels.font.size = 13) %>%
+  cols_align(align = c('center'), columns = vars(Pts, Reb, Ast, Rim, Rim_Per, Mid, Mid_Per, Three, Three_Per, Off_Reb, Def_Reb, Stl, Blk, Tov, Charges, Fouls)) %>%
+  sub_missing() %>%
+  opt_interactive(use_compact_mode = TRUE)
+saveRDS(full_practice_table, file = save_name1)
+```
+
+#basic practice table
+
+```{r}
+basic_practice_table <- basic_practice_data %>%
+  gt() %>%
+  gt_theme_538() %>%
+  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14), fill = 'gray94', font_weight = 'normal', font_color = 'gray30') %>%
+  gt_highlight_rows(rows = c(16), fill = 'gray77') %>%
+  cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Two = md('**2pt.**'), Two_Per = md('**2pt%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Fouls = md('**Fouls**')) %>%
+  tab_header(title = md('**Practice Stat Sheet**'), subtitle = table_subtitle) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+  cols_align(align = c('center'), columns = vars(Pts, Two, Two_Per, Three, Three_Per, Off_Reb, Def_Reb, Reb, Ast, Stl, Blk, Tov, Fouls)) %>%
+  gt_add_divider(Ast) %>%
+  gt_add_divider(Two_Per) %>%
+  gt_add_divider(Three_Per) %>%
+  sub_missing() %>%
+  opt_interactive(use_compact_mode = TRUE)
+saveRDS(basic_practice_table, file = save_name2)
+```
+
+#shiny input date
+```{r, shinyapp}
+ui <- fluidPage(
+  tags$head(
+    tags$style(
+      HTML("
+        body {background-color: #7A1717;}
+        .custom-title-panel {color: #FFFFFF;}
+        .custom-sidebar-panel {background-color: #E3E3E3;}
+        .custom-sidebar-text {color: #000000;}
+        .my-tabpanel {
+          font-size: 20px;
+          height: 800px;
+        }
+        .navbar {background-color: #E3E3E3;}
+        .navbar .nav > li > a {
+          color: #000000;
+          font-size: 20px;
+          font-weight: bold;
+        }")
+    )
+  ),
+  navbarPage(
+    title = "",
+    tabPanel(
+      "UMass MBB Practice",
+      class = "my-tabpanel",
+      mainPanel(
+        img(src = 'https://pbs.twimg.com/media/FyNTeg8XwAA0hIW?format=jpg&name=medium', align = 'left')
+      )
+    ),
+    tabPanel(
+      "Daily Tables",
+      class = "my-tabpanel",
+      sidebarLayout(
+        sidebarPanel(
+          class = "custom-sidebar-panel",
+          div(
+            dateInput("selectedDate", "Select Date:", value = Sys.Date()),
+            class = "custom-sidebar-text",
+            p('Complete Totals and Basic Totals below')
+          )
+        ),
+        mainPanel(
+          gt_output("playerStatsTable"),
+          gt_output("playerStatsTable2")
+        )
+      )
+    )
+  )
+)
+
+server <- function(input, output) {
+  observeEvent(input$selectedDate, {
+    selected_date <- input$selectedDate
+    file_name <- paste0(format(selected_date, "%Y-%m-%d"), ' | Complete Practice Totals.rds')
+    file_name2 <- paste0(format(selected_date, "%Y-%m-%d"), ' | Basic Practice Totals.rds')
+    
+    if (file.exists(file_name)) {
+      tbl <- data.frame(readRDS(file = file_name))
+      output$playerStatsTable <- render_gt({
+        tbl$Rim_Per <- suppressWarnings(as.numeric(tbl$Rim_Per))
+        tbl$Mid_Per <- suppressWarnings(as.numeric(tbl$Mid_Per))
+        tbl$Three_Per <- suppressWarnings(as.numeric(tbl$Three_Per))
+        tbl$url <- full_practice_data$url
+        column_averages_rim <- sapply(tbl[, c("Rim_Per")], mean)
+        column_averages_mid <- sapply(tbl[, c("Mid_Per")], mean)
+        column_averages_three <- sapply(tbl[, c("Three_Per")], mean)
+        
+        tbl %>%
+          gt() %>%
+          gt_theme_538() %>%
+          tab_style(style = list(cell_fill(color = "gray80")), locations = cells_body(rows = seq(1, nrow(tbl), by = 2))) %>%
+          tab_style(style = list(cell_fill(color = "gray70")), locations = cells_body(rows = nrow(tbl))) %>%
+          cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Rim = md('**Rim**'), Rim_Per = md('**Rim%**'), Mid = md('**Mid**'), Mid_Per = md('**Mid%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Charges = md('**Charges**'), Fouls = md('**Fouls**')) %>%
+          tab_header(title = md('**Practice Stat Sheet**'), subtitle = paste0(format(selected_date, "%A, %B %d, %Y"), ' | Complete Totals')) %>%
+          text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+          data_color(columns = c(Rim_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = column_averages_rim)) %>%
+          data_color(columns = c(Mid_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = column_averages_mid)) %>%
+          data_color(columns = c(Three_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = column_averages_three)) %>%
+          tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+          tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+          gt_add_divider(Ast) %>%
+          gt_add_divider(Rim_Per) %>%
+          gt_add_divider(Mid_Per) %>%
+          gt_add_divider(Three_Per) %>%
+          tab_options(column_labels.font.size = 13) %>%
+          cols_align(align = c('center'), columns = c(Pts, Reb, Ast, Rim, Rim_Per, Mid, Mid_Per, Three, Three_Per, Off_Reb, Def_Reb, Stl, Blk, Tov, Charges, Fouls))
+      })
+      
+    } else {
+      output$playerStatsTable <- render_gt({
+        empty_tbl <- data.frame(Placeholder = character(0))
+        gt(empty_tbl) %>%
+          cols_hide(columns = vars(everything())) %>%
+          tab_header(title = md('**Practice Stat Sheet**'), subtitle = "No stats available for the selected date.") %>%
+          tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+          tab_options(table.background.color = '#7A1717', heading.background.color = '#7A1717', column_labels.background.color = '#7A1717')
+      })
+    }
+    
+    if (file.exists(file_name2)) {
+      tbl2 <- data.frame(readRDS(file = file_name2))
+      output$playerStatsTable2 <- render_gt({
+        tbl2$url <- full_practice_data$url
+        tbl2 %>%
+          gt() %>%
+          gt_theme_538() %>%
+          tab_style(style = list(cell_fill(color = "gray80")), locations = cells_body(rows = seq(1, nrow(tbl), by = 2))) %>%
+          tab_style(style = list(cell_fill(color = "gray70")), locations = cells_body(rows = nrow(tbl))) %>%
+          cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Two = md('**2pt.**'), Two_Per = md('**2pt%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Fouls = md('**Fouls**')) %>%
+          tab_header(title = md('**Practice Stat Sheet**'), subtitle = paste0(format(selected_date, "%A, %B %d, %Y"), ' | Basic Totals')) %>%
+          text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+          tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+          tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+          cols_align(align = c('center'), columns = vars(Pts, Two, Two_Per, Three, Three_Per, Off_Reb, Def_Reb, Reb, Ast, Stl, Blk, Tov, Fouls)) %>%
+          gt_add_divider(Ast) %>%
+          gt_add_divider(Two_Per) %>%
+          gt_add_divider(Three_Per)
+      })
+    } else {
+      output$playerStatsTable2 <- render_gt({
+        empty_tbl <- data.frame(Placeholder = character(0))
+        gt(empty_tbl) %>%
+          cols_hide(columns = vars(everything()))
+          # tab_header(title = md('**Practice Stat Sheet**'), subtitle = "No stats available for the selected date.") %>%
+          # tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15)
+      })
+    }
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+rsconnect::setAccountInfo(name='gregorylederer', token='30FACEC779D6F378ACF290984B48B571', secret='GRZ8S4SFstz7aiqMgz+uCmaJoLp38wLKdk1IIBvS')
+rsconnect::deployApp(appDir = ".", appName = "PracticeStats23-24")
+```
+
+
+#all good 
+ui <- fluidPage(
+  tags$head(
+    tags$style(
+      HTML("
+        body {background-color: #7A1717;}
+        .custom-title-panel {color: #FFFFFF;}
+        .custom-sidebar-panel {background-color: #E3E3E3;}
+        .custom-sidebar-text {color: #000000;}
+        .my-tabpanel {
+          font-size: 20px;
+          height: 800px;
+        }
+        .navbar {background-color: #E3E3E3;}
+        .navbar .nav > li > a {
+          color: #000000;
+          font-size: 20px;
+          font-weight: bold;
+        }")
+    )
+  ),
+  navbarPage(
+    title = "",
+    tabPanel(
+      "UMass MBB Practice",
+      class = "my-tabpanel",
+      mainPanel(
+        img(src = 'https://pbs.twimg.com/media/FyNTeg8XwAA0hIW?format=jpg&name=medium', align = 'left')
+      )
+    ),
+    tabPanel(
+      "Daily Tables",
+      class = "my-tabpanel",
+      sidebarLayout(
+        sidebarPanel(
+          class = "custom-sidebar-panel",
+          div(
+            dateInput("selectedDate", "Select Date:", value = Sys.Date()),
+            class = "custom-sidebar-text",
+            p('Complete Totals and Basic Totals below')
+          )
+        ),
+        mainPanel(
+          gt_output("playerStatsTable"),
+          gt_output("playerStatsTable2")
+        )
+      )
+    )
+  )
+)
+
+server <- function(input, output) {
+  observeEvent(input$selectedDate, {
+    selected_date <- input$selectedDate
+    file_name <- paste0(format(selected_date, "%Y-%m-%d"), ' | Complete Practice Totals.rds')
+    file_name2 <- paste0(format(selected_date, "%Y-%m-%d"), ' | Basic Practice Totals.rds')
+    
+    if (file.exists(file_name)) {
+      tbl <- data.frame(readRDS(file = file_name))
+      output$playerStatsTable <- render_gt({
+        tbl$Rim_Per <- suppressWarnings(as.numeric(tbl$Rim_Per))
+        tbl$Mid_Per <- suppressWarnings(as.numeric(tbl$Mid_Per))
+        tbl$Three_Per <- suppressWarnings(as.numeric(tbl$Three_Per))
+        tbl$url <- full_practice_data$url
+        column_averages_rim <- sapply(tbl[, c("Rim_Per")], mean)
+        column_averages_mid <- sapply(tbl[, c("Mid_Per")], mean)
+        column_averages_three <- sapply(tbl[, c("Three_Per")], mean)
+        
+        tbl %>%
+          gt() %>%
+          gt_theme_538() %>%
+          tab_style(style = list(cell_fill(color = "gray80")), locations = cells_body(rows = seq(1, nrow(tbl), by = 2))) %>%
+          tab_style(style = list(cell_fill(color = "gray70")), locations = cells_body(rows = nrow(tbl))) %>%
+          cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Rim = md('**Rim**'), Rim_Per = md('**Rim%**'), Mid = md('**Mid**'), Mid_Per = md('**Mid%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Charges = md('**Charges**'), Fouls = md('**Fouls**')) %>%
+          tab_header(title = md('**Practice Stat Sheet**'), subtitle = paste0(format(selected_date, "%A, %B %d, %Y"), ' | Complete Totals')) %>%
+          text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+          data_color(columns = c(Rim_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = column_averages_rim)) %>%
+          data_color(columns = c(Mid_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = column_averages_mid)) %>%
+          data_color(columns = c(Three_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = column_averages_three)) %>%
+          tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+          tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+          gt_add_divider(Ast) %>%
+          gt_add_divider(Rim_Per) %>%
+          gt_add_divider(Mid_Per) %>%
+          gt_add_divider(Three_Per) %>%
+          tab_options(column_labels.font.size = 13) %>%
+          cols_align(align = c('center'), columns = c(Pts, Reb, Ast, Rim, Rim_Per, Mid, Mid_Per, Three, Three_Per, Off_Reb, Def_Reb, Stl, Blk, Tov, Charges, Fouls))
+      })
+      
+    } else {
+      output$playerStatsTable <- render_gt({
+        empty_tbl <- data.frame(Placeholder = character(0))
+        gt(empty_tbl) %>%
+          cols_hide(columns = vars(everything())) %>%
+          tab_header(title = md('**Practice Stat Sheet**'), subtitle = "No stats available for the selected date.") %>%
+          tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+          tab_options(table.background.color = '#7A1717', heading.background.color = '#7A1717', column_labels.background.color = '#7A1717')
+      })
+    }
+    
+    if (file.exists(file_name2)) {
+      tbl2 <- data.frame(readRDS(file = file_name2))
+      output$playerStatsTable2 <- render_gt({
+        tbl2$url <- full_practice_data$url
+        tbl2 %>%
+          gt() %>%
+          gt_theme_538() %>%
+          tab_style(style = list(cell_fill(color = "gray80")), locations = cells_body(rows = seq(1, nrow(tbl), by = 2))) %>%
+          tab_style(style = list(cell_fill(color = "gray70")), locations = cells_body(rows = nrow(tbl))) %>%
+          cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Two = md('**2pt.**'), Two_Per = md('**2pt%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Fouls = md('**Fouls**')) %>%
+          tab_header(title = md('**Practice Stat Sheet**'), subtitle = paste0(format(selected_date, "%A, %B %d, %Y"), ' | Basic Totals')) %>%
+          text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+          tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+          tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+          cols_align(align = c('center'), columns = vars(Pts, Two, Two_Per, Three, Three_Per, Off_Reb, Def_Reb, Reb, Ast, Stl, Blk, Tov, Fouls)) %>%
+          gt_add_divider(Ast) %>%
+          gt_add_divider(Two_Per) %>%
+          gt_add_divider(Three_Per)
+      })
+    } else {
+      output$playerStatsTable2 <- render_gt({
+        empty_tbl <- data.frame(Placeholder = character(0))
+        gt(empty_tbl) %>%
+          cols_hide(columns = vars(everything()))
+          # tab_header(title = md('**Practice Stat Sheet**'), subtitle = "No stats available for the selected date.") %>%
+          # tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15)
+      })
+    }
+  })
+}
+
+shinyApp(ui = ui, server = server) 
+
+#good player input 
+ui \<- fluidPage(
+titlePanel("Player Stats"), sidebarLayout( sidebarPanel(
+selectInput("player", "Select Player:", choices =
+unique(full_practice_data\$Player)) ), mainPanel(
+gt_output("playerStatsTable") ) ) )
+
+server \<- function(input, output) {
+output$playerStatsTable <- render_gt({ selected_player <- input$player
+player_stats \<- subset(full_practice_data, Player == selected_player)
+
+```         
+column_averages <- sapply(player_stats[, c("Rim_Per", "Mid_Per", "Three_Per")], mean)
+
+tbl <- gt(player_stats) %>%
+  gt_theme_538() %>%
+  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14), fill = 'gray94', font_weight = 'normal', font_color = 'gray30') %>%
+  gt_highlight_rows(rows = c(16), fill = 'gray77') %>%
+  cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Rim = md('**Rim**'), Rim_Per = md('**Rim%**'), Mid = md('**Mid**'), Mid_Per = md('**Mid%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Charges = md('**Charges**'), Fouls = md('**Fouls**')) %>%
+  tab_header(title = md('**Practice Stat Sheet**'), subtitle = table_subtitle) %>%
+  text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  data_color(columns = c(Rim_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = column_averages)) %>%
+  data_color(columns = c(Mid_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = column_averages)) %>%
+  data_color(columns = c(Three_Per), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = "ggsci::green_material") %>% as.character(), domain = column_averages)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_options(heading.title.font.size = 30, heading.subtitle.font.size = 15) %>%
+  gt_add_divider(Ast) %>%
+  gt_add_divider(Rim_Per) %>%
+  gt_add_divider(Mid_Per) %>%
+  gt_add_divider(Three_Per) %>%
+  tab_options(column_labels.font.size = 13) %>%
+  cols_align(align = c('center'), columns = vars(Pts, Reb, Ast, Rim, Rim_Per, Mid, Mid_Per, Three, Three_Per, Off_Reb, Def_Reb, Stl, Blk, Tov, Charges, Fouls)) 
+```
+
+}) }
+
+shinyApp(ui = ui, server = server)
