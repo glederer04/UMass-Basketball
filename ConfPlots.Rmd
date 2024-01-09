@@ -1,0 +1,51 @@
+---
+title: "ConfPlots"
+author: "Greg"
+date: "2024-01-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
+```
+
+#packages
+```{r}
+library(cbbplotR)
+library(cbbdata)
+cbbdata::cbd_login(username = 'glederer', password = 'Bryce.0819')
+library(tidyverse)
+library(ggplot2)
+library(glue)
+```
+
+#input
+```{r}
+Team <- 'Dayton'
+Conf <- 'A10'
+Teams <- c('Massachusetts', Team)
+savename <- paste0(Team, ' | Adjusted Efficiency Plot.png')
+```
+
+#data
+```{r}
+conf_team_data <- cbd_torvik_ratings(year = 2024, conf = Conf)
+
+plot <- conf_team_data %>% 
+  ggplot(aes(adj_o, adj_d, team = team)) +
+  geom_cbb_teams(highlight_teams = Teams, width = 0.07, highlight_method = 'both') +
+  geom_mean_lines(aes(x0 = adj_o, y0 = adj_d), color = 'black') +
+  theme_minimal() +
+  theme(plot.title.position = 'plot',
+        plot.title = element_text(face = 'bold', size = 18, hjust = 0.5),
+        plot.subtitle = element_text(face = 'bold', size = 12, hjust = 0.5),
+        plot.background = element_rect(fill = 'gray89'),
+        axis.title = element_text(face = 'bold')) +
+  labs(title = glue('Adjusted Efficiencies'),
+       subtitle = glue('Conference(s): {Conf}'),
+       x = 'Offense',
+       y = 'Defense')
+ggsave(plot = plot, filename = savename)
+```
+

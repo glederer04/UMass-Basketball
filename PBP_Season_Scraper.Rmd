@@ -7,13 +7,13 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
 ```
 
 #packages
 ```{r}
 library(bigballR)
 library(gamezoneR)
-knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
 ```
 
 #IDs

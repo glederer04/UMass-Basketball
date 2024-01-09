@@ -1,0 +1,46 @@
+---
+title: "Hex_Player_Charts"
+author: "Greg"
+date: "2023-06-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
+```
+
+#packages
+```{r}
+library(bigballR)
+library(toRvik)
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(RGraphics)
+library(gridExtra)
+library(stringr)
+library(dplyr)
+library(ncaahoopR)
+```
+
+#player stats
+```{r}
+team <- 'Massachusetts'
+team_ids <- teamids
+team_ids <- team_ids %>% filter(Season == "2022-23") %>% filter(Team == team)
+schedule <- get_team_schedule(team.name = team, season = '2022-23')
+player_stats <- get_player_stats(play_by_play_data = get_play_by_play(schedule), multi.games = T)
+```
+
+#old csv
+```{r}
+big_data <- read.csv("/Users/gregorylederer/Desktop/UMass Basketball/22-23 Player PBP Data.csv")
+league_avg <- colMeans(big_data[,3:ncol(big_data)])
+```
+
+#compare
+```{r}
+comp_data <- rbind(player_stats, league_avg)
+```
+

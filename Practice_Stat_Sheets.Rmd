@@ -6,7 +6,8 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
 ```
 
 #packages
@@ -16,20 +17,18 @@ library(cowplot)
 library(ggpubr)
 library(dplyr)
 library(gtExtras)
-knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
-getwd()
 ```
 
 #get data
 ```{r}
-practice_data <- read.csv("CodeStatSheet - Sheet1.csv")
+practice_data <- read.csv("/Users/gregorylederer/Desktop/UMass Basketball/CodeStatSheet - Sheet1.csv")
 ```
 
 #inputs
 ```{r}
 table_subtitle <- paste0(format(Sys.Date(), format="%B %d, %Y"), " | Complete Totals")
-save_name1 <- paste0(format(Sys.Date(), format="%B %d"), " - Complete Totals Stat Sheet.png")
-save_name2 <- paste0(format(Sys.Date(), format="%B %d"), " - Basic Totals Stat Sheet.png")
+save_name1 <- paste0(format(Sys.Date(), format="%m-%d-%Y"), " | Complete Totals Stat Sheet.png")
+save_name2 <- paste0(format(Sys.Date(), format="%m-%d-%Y"), " | Basic Totals Stat Sheet.png")
 ```
 
 #full data
@@ -116,8 +115,8 @@ basic_practice_data[nrow(basic_practice_data) + 1,] <- totals_row
 full_practice_table <- full_practice_data %>%
   gt() %>%
   gt_theme_538() %>%
-  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14), fill = 'gray94', font_weight = 'normal', font_color = 'gray30') %>%
-  gt_highlight_rows(rows = c(16), fill = 'gray77') %>%
+  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14,16), fill = 'gray78', font_weight = 'normal', font_color = 'gray30') %>%
+  gt_highlight_rows(rows = c(17), fill = 'gray67') %>%
   cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Rim = md('**Rim**'), Rim_Per = md('**Rim%**'), Mid = md('**Mid**'), Mid_Per = md('**Mid%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Charges = md('**Charges**'), Fouls = md('**Fouls**')) %>%
   tab_header(title = md('**Practice Stat Sheet**'), subtitle = table_subtitle) %>%
   text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
@@ -140,8 +139,8 @@ full_practice_table <- full_practice_data %>%
 basic_practice_table <- basic_practice_data %>%
   gt() %>%
   gt_theme_538() %>%
-  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14), fill = 'gray94', font_weight = 'normal', font_color = 'gray30') %>%
-  gt_highlight_rows(rows = c(16), fill = 'gray77') %>%
+  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14,16), fill = 'gray78', font_weight = 'normal', font_color = 'gray30') %>%
+  gt_highlight_rows(rows = c(17), fill = 'gray67') %>%
   cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Two = md('**2pt.**'), Two_Per = md('**2pt%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Fouls = md('**Fouls**')) %>%
   tab_header(title = md('**Practice Stat Sheet**'), subtitle = table_subtitle) %>%
   text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%

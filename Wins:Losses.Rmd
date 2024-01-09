@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
 ```
 
 #packages
@@ -19,7 +20,6 @@ library(cowplot)
 library(ggpubr)
 library(dplyr)
 library(rvest)
-knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
 ```
 
 #input

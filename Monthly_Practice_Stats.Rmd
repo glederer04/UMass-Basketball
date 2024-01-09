@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
 ```
 
 #packages
@@ -16,7 +17,6 @@ library(cowplot)
 library(ggpubr)
 library(dplyr)
 library(gtExtras)
-knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball/Visuals')
 ```
 
 #get data
@@ -152,8 +152,8 @@ advanced_data$eFG = as.numeric(as.character(advanced_data$eFG))
 full_practice_table <- full_practice_data %>%
   gt() %>%
   gt_theme_538() %>%
-  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14), fill = 'gray94', font_weight = 'normal', font_color = 'gray30') %>%
-  gt_highlight_rows(rows = c(16), fill = 'gray77') %>%
+  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14,16), fill = 'gray78', font_weight = 'normal', font_color = 'gray30') %>%
+  gt_highlight_rows(rows = c(17), fill = 'gray67') %>%
   cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Rim = md('**Rim**'), Rim_Per = md('**Rim%**'), Mid = md('**Mid**'), Mid_Per = md('**Mid%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Charges = md('**Charges**'), Fouls = md('**Fouls**')) %>%
   tab_header(title = md('**Practice Stat Sheet**'), subtitle = table_subtitle) %>%
   text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
@@ -176,8 +176,8 @@ full_practice_table <- full_practice_data %>%
 basic_practice_table <- basic_practice_data %>%
   gt() %>%
   gt_theme_538() %>%
-  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14), fill = 'gray94', font_weight = 'normal', font_color = 'gray30') %>%
-  gt_highlight_rows(rows = c(16), fill = 'gray77') %>%
+  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14,16), fill = 'gray78', font_weight = 'normal', font_color = 'gray30') %>%
+  gt_highlight_rows(rows = c(17), fill = 'gray67') %>%
   cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), Two = md('**2pt.**'), Two_Per = md('**2pt%**'), Three = md('**3pt.**'), Three_Per = md('**3pt%**'), Off_Reb = md('**OReb**'), Def_Reb = md('**DReb**'), Reb = md('**Reb**'), Ast = md('**Ast**'), Stl = md('**Stl**'), Blk = md('**Blk**'), Tov = md('**Tov**'), Fouls = md('**Fouls**')) %>%
   tab_header(title = md('**Practice Stat Sheet**'), subtitle = table_subtitle) %>%
   text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
@@ -195,8 +195,8 @@ basic_practice_table <- basic_practice_data %>%
 advanced_table <- advanced_data %>%
   gt() %>%
   gt_theme_538() %>%
-  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14), fill = 'gray94', font_weight = 'normal', font_color = 'gray30') %>%
-  gt_highlight_rows(rows = c(16), fill = 'gray77') %>%
+  gt_highlight_rows(rows = c(2, 4, 6, 8, 10, 12, 14,16), fill = 'gray78', font_weight = 'normal', font_color = 'gray30') %>%
+  gt_highlight_rows(rows = c(17), fill = 'gray67') %>%
   cols_label(url = '', Player = md('**Player**'), Pts = md('**Pts**'), eFG = md('**eFG%**'), Rim = md('**Rim**'), Rim_par = md('**Rim Attempts**'), Mid = md('**Mid**'), Mid_par = md('**Mid Attempts**'), Three = md('**Three**'), Three_par = md('**Three Attempts**')) %>%
   tab_header(title = md('**Advanced Stat Sheet**'), subtitle = table_subtitle_a) %>%
   text_transform(locations = cells_body(vars(url)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%

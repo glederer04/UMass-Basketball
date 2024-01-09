@@ -1,0 +1,290 @@
+---
+title: "TeamReportCards"
+author: "Greg"
+date: "2024-01-01"
+output: html_document
+---
+#################
+**SELECT TEAM**
+#################
+```{r}
+Team <- 'Dayton'
+#dict$NCAA
+savename <- paste0(Team, ' | Report Card.png')
+savename2 <- paste0(Team, ' | Players Report Card.png')
+conf_logo <- 'https://content.sportslogos.net/logos/153/4935/full/atlantic_10_conference_logo_secondary_20144281.png'
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
+```
+
+#packages
+```{r}
+library(ncaahoopR)
+library(bigballR)
+library(tidyverse)
+library(cbbdata)
+cbbdata::cbd_login(username = 'glederer', password = 'Bryce.0819')
+library(gt)
+library(gtExtras)
+library(glue)
+library(here)
+library(magick)
+library(tidyr)
+source('https://gist.github.com/andreweatherman/0a81c7122a133a015583587573a123ff/raw/4cd6b9db1d39c46e1b93b069bc801e4eac846b19/gt_plt_bar_pct.R')
+```
+
+#data
+adj_o/d, efg, ft, ftr, 2pt%, 3pt%, 3PAR, Reb rate, ast rate
+```{r}
+all_stats <- c('adj_o', 'adj_d', 'efg', 'def_efg', 'ftr', 'def_ftr', 'oreb_rate', 'dreb_rate', 'tov_rate', 'def_tov_rate', 'two_pt_pct', 'three_pt_pct', 'ft_pct', 'def_two_pt_pct', 'def_three_pt_pct', 'def_ft_pct', 'three_fg_rate', 'def_three_fg_rate', 'assist_rate', 'def_assist_rate')
+hm <- c('ACC', 'BE', 'B10', 'B12', 'P12', 'SEC')
+mm <- c('MWC', 'A10', 'Amer', 'MVC', 'WCC', 'Ivy', 'CUSA', 'SC')
+reverse_cols <- c('adj_d_', 'def_efg_', 'def_ftr_', 'tov_rate_', 'def_two_pt_pct_', 'def_three_pt_pct_', 'def_ft_pct_', 'def_three_fg_rate_', 'def_assist_rate_')
+data <- cbd_torvik_team_factors(year = 2024)
+
+data <- data %>%
+  mutate(
+    conf_group = case_when(conf %in% hm ~ 'High-Majors', conf %in% mm ~ 'Mid-Majors', .default = 'Low-Majors')
+  ) %>%
+  select(all_of(c('team', 'conf', 'conf_group', all_stats))) %>%
+  mutate(across(-c(team, conf, conf_group), percent_rank, .names = '{.col}_ptile')) %>%
+  mutate(across(-c(team, conf), percent_rank, .names = '{.col}_conf_ptile'), .by = c(conf_group)) %>%
+  mutate(across(all_of(starts_with(reverse_cols)), ~1 - .x))
+```
+
+#team data
+```{r}
+team_data <- data %>%
+  filter(team == Team)
+team_df <- data.frame(Team = c(team_data$team),
+                      Conf = c(team_data$conf),
+                      Conf_group = c(team_data$conf_group),
+                      Stat = c('adj_o', 'efg', 'ft_pct', 'ftr', 'two_pt_pct', 'three_pt_pct', 'three_fg_rate', 'oreb_rate', 'tov_rate', 'assist_rate', 'adj_d', 'def_efg', 'def_ft_pct', 'def_ftr', 'def_two_pt_pct', 'def_three_pt_pct', 'def_three_fg_rate', 'dreb_rate', 'def_tov_rate', 'def_assist_rate'),
+                      raw = c(team_data$adj_o, team_data$efg, team_data$ft_pct, team_data$ftr, team_data$two_pt_pct, team_data$three_pt_pct, team_data$three_fg_rate, team_data$oreb_rate, team_data$tov_rate, team_data$assist_rate, team_data$adj_d, team_data$def_efg, team_data$def_ft_pct, team_data$def_ftr, team_data$def_two_pt_pct, team_data$def_three_pt_pct, team_data$def_three_fg_rate, team_data$dreb_rate, team_data$def_tov_rate, team_data$def_assist_rate),
+                      ptile = c(team_data$adj_o_ptile, team_data$efg_ptile, team_data$ft_pct_ptile, team_data$ftr_ptile, team_data$two_pt_pct_ptile, team_data$three_pt_pct_ptile, team_data$three_fg_rate_ptile, team_data$oreb_rate_ptile, team_data$tov_rate_ptile, team_data$assist_rate_ptile, team_data$adj_d_ptile, team_data$def_efg_ptile, team_data$def_ft_pct_ptile, team_data$def_ftr_ptile, team_data$def_two_pt_pct_ptile, team_data$def_three_pt_pct_ptile, team_data$def_three_fg_rate_ptile, team_data$dreb_rate_ptile, team_data$def_tov_rate_ptile, team_data$def_assist_rate_ptile),
+                      conf_ptile = c(team_data$adj_o_conf_ptile, team_data$efg_conf_ptile, team_data$ft_pct_conf_ptile, team_data$ftr_conf_ptile, team_data$two_pt_pct_conf_ptile, team_data$three_pt_pct_conf_ptile, team_data$three_fg_rate_conf_ptile, team_data$oreb_rate_conf_ptile, team_data$tov_rate_conf_ptile, team_data$assist_rate_conf_ptile, team_data$adj_d_conf_ptile, team_data$def_efg_conf_ptile, team_data$def_ft_pct_conf_ptile, team_data$def_ftr_conf_ptile, team_data$def_two_pt_pct_conf_ptile, team_data$def_three_pt_pct_conf_ptile, team_data$def_three_fg_rate_conf_ptile, team_data$dreb_rate_conf_ptile, team_data$def_tov_rate_conf_ptile, team_data$def_assist_rate_conf_ptile),
+                      plot_name = c('Off. Rating', 'eFG%', 'FT%', 'FTA/FGA', '2pt%', '3pt%', '3FGA/FGA', 'ORB%', 'TOV%','AST%', 'Def. Rating', 'eFG%', 'FT%', 'FTA/FGA', '2pt%', '3pt%', '3FGA/FGA', 'DRB%', 'TOV%','AST%'),
+                      group = c('Offense', 'Offense', 'Offense', 'Offense', 'Offense', 'Offense', 'Offense', 'Offense', 'Offense','Offense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense'))
+team_df <- team_df %>%
+  mutate(
+    natl_grade = case_when(
+      ptile >= 0.95 ~ "A+",
+        ptile >= 0.90 ~ "A",
+        ptile >= 0.85 ~ "A-",
+        ptile >= 0.80 ~ "B+",
+        ptile >= 0.75 ~ "B",
+        ptile >= 0.70 ~ "B-",
+        ptile >= 0.65 ~ "C+",
+        ptile >= 0.60 ~ "C",
+        ptile >= 0.55 ~ "C-",
+        ptile >= 0.50 ~ "D+",
+        ptile >= 0.45 ~ "D",
+        ptile >= 0.40 ~ "D-",
+        .default = "F"
+    )
+  )
+```
+
+#plot
+```{r}
+team_stuff <- cbd_teams() %>% filter(torvik_team == Team)
+conf_thing <- team_df$Conf_group %>% unique()
+font <- 'Spline Sans Mono'
+title_text = glue('Team Report Card: {Team}')
+subtitle_text = glue('Data per Barttorvik through {format(Sys.Date(), "%b %e, %Y")}')
+title_header <- glue(
+  "<div style='display: flex; justify-content: space-between; align-items: center; background-color: #e2e2e2; padding: 10px; border-radius: 5px;'>
+    <div style='flex-grow: 1; text-align: center; display: flex; align-items: center;'>
+      <div style='margin-right: 10px;'>
+        <img src='{conf_logo}' style='height: 50px; width: auto; vertical-align: middle;'>
+      </div>
+      <div style='flex-grow: 1; text-align: center;'>
+        <span style='font-family: Arial, sans-serif; font-weight: bold; font-size: 28px; line-height: 1.2;'>{title_text}</span><br>
+        <span style='font-family: 'Times New Roman', serif; font-size: 18px; font-weight: normal; line-height: 1.2;'>{subtitle_text}</span>
+      </div>
+    </div>
+    <div>
+      <img src='{team_stuff$logo}' style='height: 65px; width: auto; vertical-align: middle;'>
+    </div>
+  </div>"
+)
+
+table <- team_df %>%
+  group_by(group) %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_hide(c(Team, Conf, Conf_group, Stat)) %>% 
+  cols_move_to_start(plot_name) %>% 
+  cols_width(ptile ~ px(225), conf_ptile ~ px(225), plot_name ~ px(110)) %>% 
+  cols_align(columns = c(everything(), -plot_name), 'center') %>% 
+  cols_align(columns = c(plot_name), 'left') %>% 
+  gt_bars(ptile, labels = TRUE, fill = team_stuff$color, domain = 0:1, digits = 0) %>% 
+  gt_bars(conf_ptile, labels = TRUE, fill = team_stuff$color, domain = 0:1, digits = 0) %>%
+  fmt_number(columns = raw, rows = everything(), decimals = 1) %>% 
+  gt_add_divider(raw, color = 'black', include_labels = FALSE) %>%
+  gt_add_divider(conf_ptile, color = 'black', include_labels = FALSE) %>%
+  cols_label(plot_name = 'Stat', raw = 'Value', ptile = 'National', conf_ptile = conf_thing, natl_grade = 'Grade') %>%
+  tab_style(locations = cells_row_groups(), style = cell_text(weight = 'bold')) %>%
+  tab_style(locations = cells_row_groups(), style = list(cell_fill(color = 'gray89'),cell_text(font = google_font(font), align = 'center', transform = 'uppercase', size = 20))) %>%
+  tab_spanner(columns = ends_with('ptile'), label = glue('Percentile relative to...')) %>% 
+  tab_options(data_row.padding = 3.5) %>%
+  tab_header(title = html(title_header)) %>%
+  gtsave(savename)
+table
+```
+
+
+```{r}
+Team2 <- Team
+
+season_avgs <- cbd_torvik_player_season(year = 2024)
+
+season_avgs <- season_avgs %>%
+  mutate(
+    conf_group = case_when(conf %in% hm ~ 'High-Majors', conf %in% mm ~ 'Mid-Majors',
+                           .default = 'Low-Majors'),
+    pos_group = case_when(pos %in% c('Combo G', 'Pure PG', 'Scoring PG') ~ 'Guard',
+                          pos %in% c('Wing F', 'Wing G', 'Stretch 4') ~ 'Wing',
+                          pos %in% c('C', 'PF/C') ~ 'Big')
+  )
+season_avgs <- season_avgs %>%
+  mutate(
+    player = paste0(player, ' (', pos_group, ')')
+  )
+```
+
+#pitles for groups
+guards: box +/-, porpag, efg, ast/to, FT%
+wings: box +/-, porpag, efg, rpg, FT%
+bigs: box +/-, porpag, FG%, rpg, FT%
+```{r}
+all_stats <- c('bpm', 'porpag', 'efg', 'ast_to', 'ft_pct', 'rpg', 'fg_pct')
+
+season_avgs <- season_avgs %>%
+  select(all_of(c('player', 'team', 'conf', 'conf_group', 'pos_group', 'mpg', all_stats))) %>%
+  mutate(across(-c(player, team, conf, conf_group, mpg), percent_rank, .names = '{.col}_ptile'), .by = c(pos_group)) %>%
+  mutate(across(-c(player, team, conf, mpg), percent_rank, .names = '{.col}_conf_ptile'), .by = c(conf_group, pos_group))
+
+player_data <- season_avgs %>%
+  filter(team == Team2) %>%
+  top_n(5, wt = mpg)
+
+player_data <- player_data %>%
+  mutate(
+    ft_pct = ft_pct * 100,
+    fg_pct = fg_pct * 100
+  )
+
+player_dfs <- c()
+for (i in 1:nrow(player_data)) {
+  if (player_data$pos_group[i] == 'Guard') {
+    player_i_data <- player_data[i,c('player', 'team', 'conf', 'conf_group', 'bpm', 'bpm_ptile', 'bpm_conf_ptile', 'porpag', 'porpag_ptile', 'porpag_conf_ptile', 'efg', 'efg_ptile', 'efg_conf_ptile', 'ast_to', 'ast_to_ptile', 'ast_to_conf_ptile', 'ft_pct', 'ft_pct_ptile', 'ft_pct_conf_ptile')]
+    player_i_data$name1 <- c('Box +/-')
+    player_i_data$name2 <- c('PORPAG')
+    player_i_data$name3 <- c('eFG%')
+    player_i_data$name4 <- c('Ast/Tov')
+    player_i_data$name5 <- c('FT%')
+    player_dfs[[paste0('player_',i)]] <- player_i_data
+  } else if (player_data$pos_group[i] == 'Wing') {
+    player_i_data <- player_data[i,c('player', 'team', 'conf', 'conf_group', 'bpm', 'bpm_ptile', 'bpm_conf_ptile', 'porpag', 'porpag_ptile', 'porpag_conf_ptile', 'efg', 'efg_ptile', 'efg_conf_ptile', 'rpg', 'rpg_ptile', 'rpg_conf_ptile', 'ft_pct', 'ft_pct_ptile', 'ft_pct_conf_ptile')]
+    player_i_data$name1 <- c('Box +/-')
+    player_i_data$name2 <- c('PORPAG')
+    player_i_data$name3 <- c('eFG%')
+    player_i_data$name4 <- c('Rebounds')
+    player_i_data$name5 <- c('FT%')
+    player_dfs[[paste0('player_',i)]] <- player_i_data
+  } else {
+    player_i_data <- player_data[i,c('player', 'team', 'conf', 'conf_group', 'bpm', 'bpm_ptile', 'bpm_conf_ptile', 'porpag', 'porpag_ptile', 'porpag_conf_ptile', 'fg_pct', 'fg_pct_ptile', 'fg_pct_conf_ptile', 'rpg', 'rpg_ptile', 'rpg_conf_ptile', 'ft_pct', 'ft_pct_ptile', 'ft_pct_conf_ptile')]
+    player_i_data$name1 <- c('Box +/-')
+    player_i_data$name2 <- c('PORPAG')
+    player_i_data$name3 <- c('FG%')
+    player_i_data$name4 <- c('Rebounds')
+    player_i_data$name5 <- c('FT%')
+    player_dfs[[paste0('player_',i)]] <- player_i_data
+  }
+}
+```
+
+
+```{r}
+final_df <- data.frame(player = c(player_dfs$player_1$player, player_dfs$player_1$player, player_dfs$player_1$player, player_dfs$player_1$player, player_dfs$player_1$player, player_dfs$player_2$player, player_dfs$player_2$player, player_dfs$player_2$player, player_dfs$player_2$player, player_dfs$player_2$player, player_dfs$player_3$player, player_dfs$player_3$player, player_dfs$player_3$player, player_dfs$player_3$player, player_dfs$player_3$player, player_dfs$player_4$player, player_dfs$player_4$player, player_dfs$player_4$player, player_dfs$player_4$player, player_dfs$player_4$player, player_dfs$player_5$player, player_dfs$player_5$player, player_dfs$player_5$player, player_dfs$player_5$player, player_dfs$player_5$player),
+                       stat = c(names(player_dfs$player_1)[5], names(player_dfs$player_1)[8], names(player_dfs$player_1)[11], names(player_dfs$player_1)[14], names(player_dfs$player_1)[17], names(player_dfs$player_2)[5], names(player_dfs$player_2)[8], names(player_dfs$player_2)[11], names(player_dfs$player_2)[14], names(player_dfs$player_2)[17], names(player_dfs$player_3)[5], names(player_dfs$player_3)[8], names(player_dfs$player_3)[11], names(player_dfs$player_3)[14], names(player_dfs$player_3)[17], names(player_dfs$player_4)[5], names(player_dfs$player_4)[8], names(player_dfs$player_4)[11], names(player_dfs$player_4)[14], names(player_dfs$player_4)[17], names(player_dfs$player_5)[5], names(player_dfs$player_5)[8], names(player_dfs$player_5)[11], names(player_dfs$player_5)[14], names(player_dfs$player_5)[17]),
+                       raw = c(unlist(player_dfs$player_1[,c(5,8,11,14,17)]), unlist(player_dfs$player_2[,c(5,8,11,14,17)]), unlist(player_dfs$player_3[,c(5,8,11,14,17)]), unlist(player_dfs$player_4[,c(5,8,11,14,17)]), unlist(player_dfs$player_5[,c(5,8,11,14,17)])),
+                       ptile = c(unlist(player_dfs$player_1[,c(6,9,12,15,18)]), unlist(player_dfs$player_2[,c(6,9,12,15,18)]), unlist(player_dfs$player_3[,c(6,9,12,15,18)]), unlist(player_dfs$player_4[,c(6,9,12,15,18)]), unlist(player_dfs$player_5[,c(6,9,12,15,18)])),
+                       conf_ptile = c(unlist(player_dfs$player_1[,c(7,10,13,16,19)]), unlist(player_dfs$player_2[,c(7,10,13,16,19)]), unlist(player_dfs$player_3[,c(7,10,13,16,19)]), unlist(player_dfs$player_4[,c(7,10,13,16,19)]), unlist(player_dfs$player_5[,c(7,10,13,16,19)])),
+                       plot_name = c(unlist(player_dfs$player_1[,c(20,21,22,23,24)]), unlist(player_dfs$player_2[,c(20,21,22,23,24)]), unlist(player_dfs$player_3[,c(20,21,22,23,24)]), unlist(player_dfs$player_4[,c(20,21,22,23,24)]), unlist(player_dfs$player_5[,c(20,21,22,23,24)]))
+                       )
+
+final_df <- final_df %>%
+  mutate(
+    natl_grade = case_when(
+      ptile >= 0.95 ~ "A+",
+        ptile >= 0.90 ~ "A",
+        ptile >= 0.85 ~ "A-",
+        ptile >= 0.80 ~ "B+",
+        ptile >= 0.75 ~ "B",
+        ptile >= 0.70 ~ "B-",
+        ptile >= 0.65 ~ "C+",
+        ptile >= 0.60 ~ "C",
+        ptile >= 0.55 ~ "C-",
+        ptile >= 0.50 ~ "D+",
+        ptile >= 0.45 ~ "D",
+        ptile >= 0.40 ~ "D-",
+        .default = "F"
+    )
+  )
+```
+
+
+```{r}
+title_text = glue('{Team2} Players Report Card')
+subtitle_text = glue('Players with most minutes per game chosen. Data per Barttorvik through {format(Sys.Date(), "%b %e, %Y")}.')
+title_header <- glue(
+  "<div style='display: flex; justify-content: space-between; align-items: center; background-color: #e2e2e2; padding: 10px; border-radius: 5px;'>
+    <div style='flex-grow: 1; text-align: center; display: flex; align-items: center;'>
+      <div style='margin-right: 10px;'>
+        <img src='{conf_logo}' style='height: 50px; width: auto; vertical-align: middle;'>
+      </div>
+      <div style='flex-grow: 1; text-align: center;'>
+        <span style='font-family: Arial, sans-serif; font-weight: bold; font-size: 28px; line-height: 1.2;'>{title_text}</span><br>
+        <span style='font-family: Arial, serif; font-size: 15px; font-weight: normal; line-height: 1.2;'>{subtitle_text}</span>
+      </div>
+    </div>
+    <div>
+      <img src='{team_stuff$logo}' style='height: 65px; width: auto; vertical-align: middle;'>
+    </div>
+  </div>"
+)
+table2 <- final_df %>%
+  group_by(player) %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_hide(c(stat)) %>% 
+  cols_move_to_start(plot_name) %>% 
+  cols_width(ptile ~ px(225), conf_ptile ~ px(225), plot_name ~ px(110)) %>% 
+  cols_align(columns = c(everything(), -plot_name), 'center') %>% 
+  cols_align(columns = c(plot_name), 'left') %>% 
+  gt_bars(ptile, labels = TRUE, fill = team_stuff$color, domain = 0:1, digits = 0) %>% 
+  gt_bars(conf_ptile, labels = TRUE, fill = team_stuff$color, domain = 0:1, digits = 0) %>%
+  fmt_number(columns = raw, rows = everything(), decimals = 1) %>% 
+  gt_add_divider(raw, color = 'black', include_labels = FALSE) %>%
+  gt_add_divider(conf_ptile, color = 'black', include_labels = FALSE) %>%
+  cols_label(plot_name = 'Stat', raw = 'Value', ptile = 'National', conf_ptile = conf_thing, natl_grade = 'Grade') %>%
+  tab_style(locations = cells_row_groups(), style = cell_text(weight = 'bold')) %>%
+  tab_style(locations = cells_row_groups(), style = list(cell_fill(color = 'gray89'),cell_text(font = google_font(font), align = 'center', transform = 'uppercase', size = 20))) %>%
+  tab_spanner(columns = ends_with('ptile'), label = glue('Percentile relative to position group across...')) %>% 
+  tab_options(data_row.padding = 3.5) %>%
+  tab_header(title = html(title_header)) %>%
+  tab_footnote(locations = cells_body(columns = plot_name, row = which(final_df$plot_name == 'Box +/-')),
+               footnote = "Based on box score for evaluating players’ quality and contribution relative to national average") %>%
+  tab_footnote(locations = cells_body(columns = plot_name, row = which(final_df$plot_name == 'PORPAG')),
+               footnote = "PORPAG represents points above replacement player at that usage") %>%
+  tab_footnote(locations = cells_body(columns = plot_name, row = which(final_df$plot_name == 'Rebounds')),
+               footnote = "Total rebounds per game") %>%
+  gtsave(savename2)
+table2
+```
+

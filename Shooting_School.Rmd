@@ -1,0 +1,101 @@
+---
+title: "Shooting_School"
+author: "Greg"
+date: "2023-06-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
+```
+
+#packages
+```{r}
+library(gt)
+library(cowplot)
+library(ggpubr)
+library(dplyr)
+library(gtExtras)
+library(magick)
+```
+
+#get data & inputs
+```{r}
+subtitle <- 'July 10th 19th to July 16th'
+
+data <- read.csv("/Users/gregorylederer/Desktop/UMass Basketball/SummerShootingPrintable - Sheet1.csv")
+player <- data$LCorner_make[1]
+week <- data$Day[1]
+data <- data[-1,]
+save_name <- paste0(player, ' Shooting School | ', week, ' | .png')
+```
+
+```{r}
+data[is.na(data)] = 0
+data$LCorner_make <- as.numeric(data$LCorner_make)
+data$LCorner_miss <- as.numeric(data$LCorner_miss)
+
+data_t <- data %>%
+  mutate(LCorner = paste0(LCorner_make, '/', LCorner_miss+LCorner_make),
+         LWing = paste0(LWing_make, '/', LWing_miss+LWing_make),
+         LSlot = paste0(LSlot_make, '/', LSlot_miss+LSlot_make),
+         Topkey = paste0(top_make, '/', top_miss+top_make),
+         RSlot = paste0(RSlot_make, '/', RSlot_miss+RSlot_make),
+         RWing = paste0(RWing_make, '/', RWing_miss+RWing_make),
+         RCorner = paste0(RCorner_make, '/', RCorner_miss+RCorner_make),
+         scurry = paste0(sc_make, '/', sc_make+sc_miss),
+         twomin = paste0(twomin_make, '/', twomin_make+twomin_miss),
+         tot = paste0(tot_make, '/', tot_make+tot_miss)) %>%
+  select(Day, LCorner, LWing, LSlot, Topkey, RSlot, RWing, RCorner, scurry, twomin, tot)
+```
+
+```{r}
+# data_t[is.na(data_t)] = 0
+# total <- c('Total',
+#            paste0(sum(data$LCorner_make), '/', (sum(data$LCorner_make)+sum(data$LCorner_miss))),
+#            paste0(sum(data$LWing_make), '/', (sum(data$LWing_make)+sum(data$LWing_miss))),
+#            paste0(sum(data$LSlot_make), '/', (sum(data$LSlot_make)+sum(data$LSlot_miss))),
+#            paste0(sum(data$top_make), '/', (sum(data$top_make)+sum(data$top_miss))),
+#            paste0(sum(data$RCorner_make), '/', (sum(data$RCorner_make)+sum(data$RCorner_miss))),
+#            paste0(sum(data$RWing_make), '/', (sum(data$RWing_make)+sum(data$RWing_miss))),
+#            paste0(sum(data$RSlot_make), '/', (sum(data$RSlot_make)+sum(data$RSlot_miss))),
+#            paste0(sum(data$twomin_make), '/', (sum(data$twomin_make)+sum(data$twomin_miss))),
+#            paste0(sum(data$scurry_make), '/', (sum(data$scurry_make)+sum(data$scurry_miss))))
+# data_t[nrow(data_t)+1,] <- total
+```
+
+```{r}
+data_table <- data_t %>%
+  gt() %>%
+  gt_theme_538() %>%
+  gt_highlight_cols(columns = 11, fill = 'gray83') %>%
+  gt_highlight_rows(rows = 8, fill = 'gray83') %>%
+  gt_highlight_rows(rows = 9, fill = 'gray77') %>%
+  cols_label(Day = '', LCorner = md('**Corner**'), LWing = md('**Wing**'), LSlot = md('**Slot**'), Topkey = md('**Top Key**'), RSlot = md('**Slot**'), RWing = md('**Wing**'), RCorner = md('**Corner**'), scurry = md('**S.Curry**'), twomin = md('**2 Min**'), tot = md('**Total**')) %>%
+  tab_header(title = paste0(player, ' | Shooting School'), subtitle = subtitle) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_spanner(label = md('**Left**'), columns = c(LCorner, LWing, LSlot)) %>%
+  tab_spanner(label = md('**Right**'), columns = c(RCorner, RWing, RSlot)) %>%
+  tab_style(style = cell_borders(sides = c('all'), color = 'transparent', weight = px(0)), locations = cells_body()) %>%
+  gt_add_divider(LSlot) %>%
+  gt_add_divider(Day) %>%
+  gt_add_divider(Topkey) %>%
+  gt_add_divider(RSlot) %>%
+  gt_add_divider(twomin) %>%
+  tab_style(style = cell_text(style = 'oblique'), locations = cells_body(columns = Day)) %>%
+  tab_options(heading.subtitle.font.size = 15, heading.title.font.size = 24) %>%
+  gtsave(save_name)
+```
+
+combine
+#```{r}
+p2 <- image_read("/Users/gregorylederer/Desktop/UMass Basketball/Rollie Castineyra Shooting School | 4 | .png")
+p3 <- image_read("/Users/gregorylederer/Desktop/UMass Basketball/Marqui Worthy Shooting School | 4 | .png")
+p4 <- image_read("/Users/gregorylederer/Desktop/UMass Basketball/Jayden Ndjigue Shooting School | 4 | .png")
+p5 <- image_read("/Users/gregorylederer/Desktop/UMass Basketball/Sawyer Mayhugh Shooting School | 4 | .png")
+
+combined_image <- image_append(c(p2, p3, p4, p5), stack = TRUE)
+image_write(combined_image, paste0("week", week, "_total.png"))
+```
+

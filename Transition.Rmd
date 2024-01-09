@@ -1,0 +1,152 @@
+---
+title: "Transition"
+author: "Greg"
+date: "2023-12-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
+```
+
+#packages
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ncaahoopR)
+library(bigballR)
+library(gt)
+library(gtExtras)
+```
+
+#scrape
+```{r}
+game_id <- '5584950'
+opp <- 'UMass Lowell' #dict$NCAA
+save_name1 <- paste0('UMass vs. ', opp, ' | Transition Breakdown.png')
+save_name2 <- paste0(opp, ' vs. UMass', ' | Transition Breakdown.png')
+data <- get_team_stats(play_by_play_data = get_play_by_play(game_id), include_transition = T)
+UMass_data <- data %>%
+  filter(Team == 'Massachusetts')
+opp_data <- data %>%
+  filter(Team == opp)
+UMass_data <- UMass_data %>%
+  select(ends_with('_trans'))
+opp_data <- opp_data %>%
+  select(ends_with('_trans'))
+```
+
+#1st half
+```{r}
+UMass_first_half <- UMass_data %>%
+  mutate(FGM = FGM_trans,
+         FGA = FGA_trans,
+         FTMs = FTM_trans, 
+         FTAs = FTA_trans,
+         Tov = TO_trans,
+         Pts = PTS_trans,
+         Half = '1st Half') %>%
+  select(Half, FGM, FGA, FTMs, FTAs, Tov, Pts)
+UMass_first_half <- UMass_first_half[,-(1:3)]
+
+opp_first_half <- opp_data %>%
+  mutate(FGM = FGM_trans,
+         FGA = FGA_trans,
+         FTMs = FTM_trans, 
+         FTAs = FTA_trans,
+         Tov = TO_trans,
+         Pts = PTS_trans,
+         Half = '1st Half') %>%
+  select(Half, FGM, FGA, FTMs, FTAs, Tov, Pts)
+opp_first_half <- opp_first_half[,-(1:3)]
+```
+
+**DO NOT RUN AFTER 1st HALF**
+#2nd half and full game
+```{r}
+UMass_full <- UMass_data %>%
+  mutate(FGM = FGM_trans,
+         FGA = FGA_trans,
+         FTMs = FTM_trans, 
+         FTAs = FTA_trans,
+         Tov = TO_trans,
+         Pts = PTS_trans,
+         Half = 'Full Game') %>%
+  select(Half, FGM, FGA, FTMs, FTAs, Tov, Pts)
+UMass_full <- UMass_full[,-(1:3)]
+
+opp_full <- opp_data %>%
+  mutate(FGM = FGM_trans,
+         FGA = FGA_trans,
+         FTMs = FTM_trans, 
+         FTAs = FTA_trans,
+         Tov = TO_trans,
+         Pts = PTS_trans,
+         Half = 'Full Game') %>%
+  select(Half, FGM, FGA, FTMs, FTAs, Tov)
+opp_full <- opp_full[,-(1:3)]
+
+UMass_tbl <- data.frame(Half = c('1st Half', '2nd Half', 'Full Game'),
+                        FGM = c(UMass_first_half$FGM, as.numeric(UMass_full$FGM - UMass_first_half$FGM), UMass_full$FGM),
+                        FGA = c(UMass_first_half$FGA, as.numeric(UMass_full$FGA - UMass_first_half$FGA), UMass_full$FGA),
+                        FTMs = c(UMass_first_half$FTMs, as.numeric(UMass_full$FTMs - UMass_first_half$FTMs), UMass_full$FTMs),
+                        FTAs = c(UMass_first_half$FTAs, as.numeric(UMass_full$FTAs - UMass_first_half$FTAs), UMass_full$FTAs),
+                        Tov = c(UMass_first_half$Tov, as.numeric(UMass_full$Tov - UMass_first_half$Tov), UMass_full$Tov),
+                        Pts = c(UMass_first_half$Pts, as.numeric(UMass_full$Pts - UMass_first_half$Pts), UMass_full$Pts))
+
+opp_tbl <- data.frame(Half = c('1st Half', '2nd Half', 'Full Game'),
+                      FGM = c(opp_first_half$FGM, as.numeric(opp_full$FGM - opp_first_half$FGM), opp_full$FGM),
+                      FGA = c(opp_first_half$FGA, as.numeric(opp_full$FGA - opp_first_half$FGA), opp_full$FGA),
+                      FTMs = c(opp_first_half$FTMs, as.numeric(opp_full$FTMs - opp_first_half$FTMs), opp_full$FTMs),
+                      FTAs = c(opp_first_half$FTAs, as.numeric(opp_full$FTAs - opp_first_half$FTAs), opp_full$FTAs),
+                      Tov = c(opp_first_half$Tov, as.numeric(opp_full$Tov - opp_first_half$Tov), opp_full$Tov),
+                      Pts = c(opp_first_half$Pts, as.numeric(opp_full$Pts - opp_first_half$Pts), opp_full$Pts))
+```
+
+#make table
+```{r}
+UMass_tbl <- UMass_tbl %>%
+  mutate(FG = paste0(FGM, '/', FGA),
+         FTs = paste0(FTMs, '/', FTAs),
+         Tov = Tov) %>%
+  select(Half, FG, FTs, Tov, Pts)
+
+opp_tbl <- opp_tbl %>%
+  mutate(FG = paste0(FGM, '/', FGA),
+         FTs = paste0(FTMs, '/', FTAs),
+         Tov = Tov) %>%
+  select(Half, FG, FTs, Tov, Pts)
+```
+
+#gt table
+```{r}
+UMass_gt <- UMass_tbl %>%
+  gt() %>%
+  cols_label(Half = '', FG = md('**FG**'), FTs = md('**FTs**'), Tov = md('**Tov**'), Pts = md('**Points**')) %>%
+  tab_style(style = list(cell_text(weight = 'bold')), locations = cells_body(columns = Half)) %>%
+  gt_add_divider(Half, weight = px(2.5)) %>%
+  gt_add_divider(Tov, weight = px(1)) %>%
+  cols_align(align = c('center'), columns = c('Half')) %>%
+  cols_width(FG ~ px(55)) %>%
+  cols_width(FTs ~ px(50)) %>%
+  cols_width(Tov ~ px(45)) %>%
+  cols_width(Pts ~ px(55)) %>%
+  cols_align(align = c('center'), columns = c('Pts')) %>%
+  gtsave(save_name1)
+
+opp_gt <- opp_tbl %>%
+  gt() %>%
+  cols_label(Half = '', FG = md('**FG**'), FTs = md('**FTs**'), Tov = md('**Tov**'), Pts = md('**Points**')) %>%
+  tab_style(style = list(cell_text(weight = 'bold')), locations = cells_body(columns = Half)) %>%
+  gt_add_divider(Half, weight = px(2.5)) %>%
+  gt_add_divider(Tov, weight = px(1)) %>%
+  cols_align(align = c('center'), columns = c('Half')) %>%
+  cols_width(FG ~ px(55)) %>%
+  cols_width(FTs ~ px(50)) %>%
+  cols_width(Tov ~ px(45)) %>%
+  cols_width(Pts ~ px(55)) %>%
+  cols_align(align = c('center'), columns = c('Pts')) %>%
+  gtsave(save_name1)
+```
+

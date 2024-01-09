@@ -7,11 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
 ```
 
 #Directory & Packages
 ```{r}
-knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/Umass Basketball')
 library(toRvik)
 library(tidyr)
 library(tidyverse)
@@ -40,16 +40,16 @@ NCAA_team <- 'Massachusetts'#dict$NCAA
 ESPN_team <- 'UMass'#dict$ESPN
 year <- '2023'
 opp_pg <- 'Keon Thompson'
-opp_sg <- 'T.J. Weeks Jr.'
-opp_sf <- 'Matt Cross'
-opp_pf <- 'Isaac Kante'
-opp_C <- 'Wildens Leveque'
+opp_sg <- 'Rahsool Diggins'
+opp_sf <- 'Jayden Ndjigue'
+opp_pf <- 'Matt Cross'
+opp_C <- 'Josh Cohen'
 UMass_pg <- 'Keon Thompson'
-UMass_sg <- 'T.J. Weeks Jr.'
-UMass_sf <- 'Matt Cross'
-UMass_pf <- 'Isaac Kante'
-UMass_C <- 'Wildens Leveque'
-player_names <- c('KEON.THOMPSON', 'TJ.WEEKS', 'MATT.CROSS', 'ISAAC.KANTE', 'WILDENS.LEVEQUE')
+UMass_sg <- 'Rahsool Diggins'
+UMass_sf <- 'Jayden Ndjigue'
+UMass_pf <- 'Matt Cross'
+UMass_C <- 'Josh Cohen'
+player_names <- c('KEON.THOMPSON', 'RAHSOOL.DIGGINS', 'JAYDEN.NDJIGUE', 'MATT.CROSS', 'JOSH.COHEN')
 save_name1 <- paste0(NCAA_team, ' Team Info.png')
 save_name2 <- paste0(NCAA_team, ' Four Factors.png')
 save_name3 <- paste0(NCAA_team, ' Shooting.png')
@@ -191,9 +191,9 @@ shooting_table <- team_shooting %>%
 ```
 
 
-#Player Comparison
+#Player Comparison (good)
 ```{r}
-opp_roster <- ncaahoopR::get_roster(ESPN_team, season = '2022-23')
+opp_roster <- ncaahoopR::get_roster(ESPN_team, season = '2023-24')
 opp_roster <- opp_roster %>%
   mutate(height2=height, name2=name, player_image2=player_image) %>%
   select(height2, name2, player_image2)
@@ -201,7 +201,7 @@ opp_roster <- filter(opp_roster, name2 %in% c(opp_pg, opp_sg, opp_sf, opp_pf, op
 opp_roster <- opp_roster %>% arrange(factor(name2, levels = c(opp_pg, opp_sg, opp_sf, opp_pf, opp_C)))
 position = c('pg','sg','sf','pf','c')
 opp_roster <- cbind(opp_roster, position)
-UMass_roster <- ncaahoopR::get_roster('UMass', season = '2022-23')
+UMass_roster <- ncaahoopR::get_roster('UMass', season = '2023-24')
 UMass_roster <- UMass_roster %>%
   select(player_image, name, height)
 UMass_roster <- filter(UMass_roster, name %in% c(UMass_pg, UMass_sg, UMass_sf, UMass_pf, UMass_C))
@@ -233,9 +233,9 @@ PlayerComp <- full_comp %>%
 
 #team stat comparison
 ```{r}
-team_stats <- bart_team_box(year=2022)
-teams <- bart_teams(year=2022, conf = NULL)
-team_rating <- bart_ratings(year=2022)
+team_stats <- bart_team_box(year=2023)
+teams <- bart_teams(year=2023, conf = NULL)
+team_rating <- bart_ratings(year=2023)
 
 opp_team_rating <- team_rating %>%
   filter(team==NCAA_team) %>%
@@ -300,12 +300,12 @@ Comp_table <- full %>%
 
 #Player Stats
 ```{r}
-team_roster <- ncaahoopR::get_roster(ESPN_team, season = '2022-23')
+team_roster <- ncaahoopR::get_roster(ESPN_team, season = '2023-24')
 team_roster <- team_roster %>%
   mutate(num = number) %>%
   select(num, name, position, height, player_image, class, weight)
 
-bart_player_stats <- bart_player_season(year=2023, stat = 'all')
+bart_player_stats <- bart_player_season(year=2024, stat = 'all')
 basic_player_stats <- bart_player_stats %>%
   filter(team == NCAA_team) %>%
   mutate(mpg = round(mpg,1),
@@ -459,7 +459,7 @@ advanced_table <- gt(advanced_player_stats) %>%
 
 #lineups
 ```{r}
-#opp_schedule <- get_team_schedule(season = '2022-23', team.name = NCAA_team)
+opp_schedule <- get_team_schedule(season = '2023-24', team.name = NCAA_team)
 lineups <- get_lineups(play_by_play_data = get_play_by_play(schedule$Game_ID), include_transition = T)
 
 opp_lineups <- lineups %>%
@@ -1414,7 +1414,7 @@ H_stats <- H_stats %>%
          trans_rtg = round(TransOrtg,1),
          
          url = c('https://cdn-icons-png.flaticon.com/512/25/25694.png', 'https://cdn-icons-png.flaticon.com/512/25/25694.png'),
-         team = c('Home', 'Home'))
+         team = c('Offense at Home', 'Defense at Home'))
 
 for (i in 1:length(A_stats$Team)) {
   if (A_stats$Team[i] != NCAA_team) {
@@ -1485,7 +1485,7 @@ A_stats <- A_stats %>%
          trans_rtg = round(TransOrtg,1),
          
          url = c('https://toppng.com/uploads/preview/curvy-road-png-image-royalty-free-download-transparent-cartoon-windy-road-115628673545e5d4iymcx.png', 'https://toppng.com/uploads/preview/curvy-road-png-image-royalty-free-download-transparent-cartoon-windy-road-115628673545e5d4iymcx.png'),
-         team = c('Away', 'Away'))
+         team = c('Offense when Away', 'Defense when Away'))
 
 for (i in 1:length(N_stats$Team)) {
   if (N_stats$Team[i] != NCAA_team) {
@@ -1554,7 +1554,7 @@ N_stats <- N_stats %>%
          trans_rtg = round(TransOrtg,1),
          
          url = c('https://w7.pngwing.com/pngs/145/882/png-transparent-man-avatar-shrug-emoji-emoticon-iphone-emoji-hand-bunny-sticker.png', 'https://w7.pngwing.com/pngs/145/882/png-transparent-man-avatar-shrug-emoji-emoticon-iphone-emoji-hand-bunny-sticker.png'),
-         team = c('Neutral', 'Neutral'))
+         team = c('Offense at Neutral site', 'Defense at Neutral site'))
 
 offense <- rbind(A_stats, H_stats, N_stats)
 offense <- offense[c(1,3,5),]

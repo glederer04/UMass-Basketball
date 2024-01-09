@@ -1,0 +1,1501 @@
+---
+title: "New_PreGame"
+author: "Greg"
+date: "2023-12-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
+```
+
+#packages
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ncaahoopR)
+library(bigballR)
+library(cbbdata)
+cbbdata::cbd_login(username = 'glederer', password = 'Bryce.0819')
+library(ggplot2)
+library(ggdist)
+library(ggalt)
+library(gt)
+library(gtExtras)
+library(magick)
+library(glue)
+library(here)
+library(tidyr)
+library(cbbplotR)
+source('https://gist.github.com/andreweatherman/0a81c7122a133a015583587573a123ff/raw/4cd6b9db1d39c46e1b93b069bc801e4eac846b19/gt_plt_bar_pct.R')
+```
+
+#get team stuff
+```{r}
+NCAA_team <- 'Massachusetts' #dict$NCAA
+conf_logo <- 'https://content.sportslogos.net/logos/153/4935/full/atlantic_10_conference_logo_secondary_20144281.png'
+
+savename1 <- paste0(NCAA_team, ' | Radar Table.png')
+savename2 <- paste0(NCAA_team, ' | Radar eFG.png')
+savename3 <- paste0(NCAA_team, ' | Radar Attempts.png')
+savename4 <- paste0(NCAA_team, ' | Radar Efficiency.png')
+savename5 <- paste0(NCAA_team, ' Opponents | Radar Table.png')
+savename6 <- paste0(NCAA_team, ' Opponents | Radar eFG.png')
+savename7 <- paste0(NCAA_team, ' Opponents | Radar Attempts.png')
+savename8 <- paste0(NCAA_team, ' Opponents | Radar Efficiency.png')
+savename9 <- paste0(NCAA_team, ' | Four Factor 1.png')
+savename10 <- paste0(NCAA_team, ' | Four Factor 2.png')
+savename11 <- paste0(NCAA_team, ' | Overall Lineup Table.png')
+savename12 <- paste0(NCAA_team, ' | Offensive Lineup Table.png')
+savename13 <- paste0(NCAA_team, ' | Defense Lineup Table.png')
+savename14 <- paste0(NCAA_team, ' | Home Radar 1.png')
+savename15 <- paste0(NCAA_team, ' | Home Radar 2.png')
+savename16 <- paste0(NCAA_team, ' | Away Radar 1.png')
+savename17 <- paste0(NCAA_team, ' | Away Radar 2.png')
+savename18 <- paste0(NCAA_team, ' | H-A Radar Table.png')
+savename19 <- paste0(NCAA_team, ' | Report Card.png')
+savename20 <- paste0(NCAA_team, ' | Players Report Card.png')
+savename21 <- paste0(NCAA_team, ' | Adjusted Efficiency Plot.png')
+savename22 <- paste0(NCAA_team, ' | Guard Plot 1.png')
+savename23 <- paste0(NCAA_team, ' | Guard Plot 2.png')
+savename24 <- paste0(NCAA_team, ' | Guard Plot 3.png')
+savename25 <- paste0(NCAA_team, ' | Big Plot 1.png')
+savename26 <- paste0(NCAA_team, ' | Big Plot 2.png')
+savename27 <- paste0(NCAA_team, ' | Big Plot 3.png')
+schedule <- get_team_schedule(team.name = NCAA_team, season = '2023-24')
+data <- get_team_stats(play_by_play_data = get_play_by_play(schedule$Game_ID), include_transition = T)
+
+team_stuff <- ncaa_colors %>%
+  filter(ncaa_name == NCAA_team)
+color <- team_stuff$primary_color
+logo <- team_stuff$logo_url
+```
+
+#hoopmath
+```{r}
+webpage5 <- readLines('https://hoop-math.com/leader_o2024.php')
+webpage5 <- data.frame(webpage5)
+webpage5 <- webpage5[-c(5559:5571),]
+webpage5 <- data.frame(webpage5)
+webpage5 <- webpage5[-c(0:99),]
+pattern <- '<th><p align=\"center\">([^<]*)</p></th>'
+datalines <- grep(pattern, webpage5, value = TRUE)
+getexpr <- function(s,g)substring(s,g,g+attr(g,'match.length')-1)
+gg <- gregexpr(pattern,datalines)
+matches <- mapply(getexpr,datalines,gg)
+result <- gsub(pattern,'\\1',matches)
+names(result) <- NULL
+result[1:14]
+hoopmath <- as.data.frame(matrix(result,ncol=14,byrow=TRUE))
+names(hoopmath) = c('Team', 'eFG%', '% shots at rim', 'FG% at rim', '% assisted at rim', '% shots 2p J', 'FG% 2pt Jumpers', '% assisted 2pt Jumpers', '% of shots 3pt', '3FG%', '% assisted 3pt', '% shots in Transition', 'Transition eFG%', 'Non-transition eFG%')
+head(hoopmath)
+
+pattern2 <- '<td><p align=\"center\"><a href=\"([^<]*).php\">([^<]*)</a></p></td>'
+datalines2 <- grep(pattern2, webpage5, value = TRUE)
+getexpr2 <- function(s,g)substring(s,g,g+attr(g,'match.length')-1)
+gg2 <- gregexpr(pattern2,datalines2)
+matches2 <- mapply(getexpr2,datalines2,gg2)
+result2 <- gsub(pattern2,'\\1',matches2)
+names(result2) <- NULL
+result2[1:363]
+hoopmath2 <- as.data.frame(matrix(result2,ncol=1,byrow=TRUE))
+
+hoopmath_t <- cbind(hoopmath,hoopmath2)
+hoopmath_t <- subset(hoopmath_t, select = c('V1', 'eFG%', '% shots at rim', 'FG% at rim', '% assisted at rim', '% shots 2p J', 'FG% 2pt Jumpers', '% assisted 2pt Jumpers', '% of shots 3pt', '3FG%', '% assisted 3pt', '% shots in Transition', 'Transition eFG%', 'Non-transition eFG%', 'Team'))
+hoopmath_t <- subset(hoopmath_t, select = -c(Team))
+colnames(hoopmath_t)[colnames(hoopmath_t) == 'V1'] = 'Team'
+
+pattern3 <- '<td><p align=\"center\">([^<]*)</p></td>'
+datalines3 <- grep(pattern3, webpage5, value = TRUE)
+getexpr3 <- function(s,g)substring(s,g,g+attr(g,'match.length')-1)
+gg3 <- gregexpr(pattern3,datalines3)
+matches3 <- mapply(getexpr3,datalines3,gg3)
+result3 <- gsub(pattern3,'\\1',matches3)
+names(result3) <- NULL
+result3[1:4719]
+hoopmath3 <- as.data.frame(matrix(result3,ncol=13,byrow=TRUE))
+
+hoopmath_f <- cbind(hoopmath_t, hoopmath3)
+hoopmath_f <- hoopmath_f[,-2:-14]
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V1'] = 'eFG%'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V2'] = '% shots at rim'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V3'] = 'FG% at rim'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V4'] = '%assisted at rim'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V5'] = '% shots 2p J'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V6'] = 'FG% 2pt Jumpers'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V7'] = '%assisted 2pt Jumpers'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V8'] = '%of shots 3pt'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V9'] = '3FG%'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V10'] = '%assisted 3pt'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V11'] = '%shots in transition'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V12'] = 'Transition eFG%'
+colnames(hoopmath_f)[colnames(hoopmath_f) == 'V13'] = 'Non-Transition eFG%'
+hoopmath_f$Team <- sub('2024$', '', hoopmath_f$Team)
+
+#fix/make
+team_data <- data %>%
+  filter(Team == NCAA_team)
+team_data_hm <- team_data %>%
+  mutate(
+    'eFG%' = round(((sum(team_data$FGM)+(0.5*sum(team_data$TPM)))/sum(team_data$FGA))*100,1),
+    '% shots at rim' = round((sum(team_data$RIMA)/sum(team_data$FGA))*100,1),
+    'FG% at rim' = round((sum(team_data$RIMM)/sum(team_data$RIMA))*100,1),
+    '%assisted at rim' = NA,
+    '% shots 2p J' = round(mean(team_data$MIDrate)*100,1),
+    'FG% 2pt Jumpers' = round(mean(team_data$MID.)*100,1),
+    '%assisted 2pt Jumpers' = NA,
+    '%of shots 3pt' = round((sum(team_data$TPA)/sum(team_data$FGA))*100,1),
+    '3FG%' = round((sum(team_data$TPM)/sum(team_data$TPA))*100,1),
+    '%assisted 3pt' = NA,
+    '%shots in transition' = round((sum(team_data$FGA_trans)/sum(team_data$FGA))*100,1),
+    'Transition eFG%' = round(((sum(team_data$FGM_trans)+(0.5*sum(team_data$TPM_trans)))/sum(team_data$FGA_trans))*100,1),
+    'Non-Transition eFG%' = round(((sum(team_data$FGM_half)+(0.5*sum(team_data$TPM_half)))/sum(team_data$FGA_half))*100,1)
+  ) %>%
+  select(Team, 'eFG%', '% shots at rim', 'FG% at rim', '%assisted at rim', '% shots 2p J', 'FG% 2pt Jumpers', '%assisted 2pt Jumpers', '%of shots 3pt', '3FG%', '%assisted 3pt', '%shots in transition', 'Transition eFG%', 'Non-Transition eFG%')
+team_data_hm <- team_data_hm[nrow(team_data_hm), ,drop = FALSE]
+team_data_hm <- team_data_hm[, -(1:3)]
+
+#merge
+team_data_hm$Team = 'Team'
+hm_stats <- rbind(hoopmath_f, team_data_hm)
+hm_stats$`Transition eFG%` <- sub('%$', '', hm_stats$`Transition eFG%`)
+hm_stats$`Non-Transition eFG%` <- sub('%$', '', hm_stats$`Non-Transition eFG%`)
+hm_stats$`eFG%` <- as.numeric(hm_stats$`eFG%`)
+hm_stats$`Transition eFG%` <- as.numeric(hm_stats$`Transition eFG%`)
+hm_stats$`Non-Transition eFG%` <- as.numeric(hm_stats$`Non-Transition eFG%`)
+hm_stats$`% shots at rim` <- as.numeric(hm_stats$`% shots at rim`)
+hm_stats$`% shots 2p J` <- as.numeric(hm_stats$`% shots 2p J`)
+hm_stats$`%of shots 3pt` <- as.numeric(hm_stats$`%of shots 3pt`)
+hm_stats$`%shots in transition` <- as.numeric(hm_stats$`%shots in transition`)
+hm_stats$`FG% at rim` <- as.numeric(hm_stats$`FG% at rim`)
+hm_stats$`FG% 2pt Jumpers` <- as.numeric(hm_stats$`FG% 2pt Jumpers`)
+hm_stats$`3FG%` <- as.numeric(hm_stats$`3FG%`)
+hm_stats <- hm_stats[order(-hm_stats$`eFG%`),]
+row <- which(hm_stats$Team == 'Team')
+eFG_perc <- round((1 - (row/363))*100,0)
+hm_stats <- hm_stats[order(-hm_stats$`Transition eFG%`),]
+row <- which(hm_stats$Team == 'Team')
+TranseFG_perc <- round((1 - (row/363))*100,0)
+hm_stats <- hm_stats[order(-hm_stats$`Non-Transition eFG%`),]
+row <- which(hm_stats$Team == 'Team')
+HalfeFG_perc <- round((1 - (row/363))*100,0)
+hm_stats <- hm_stats[order(-hm_stats$`% shots at rim`),]
+row <- which(hm_stats$Team == 'Team')
+RimAtt_perc <- round((1 - (row/363))*100,0)
+hm_stats <- hm_stats[order(-hm_stats$`% shots 2p J`),]
+row <- which(hm_stats$Team == 'Team')
+MidAtt_perc <- round((1 - (row/363))*100,0)
+hm_stats <- hm_stats[order(-hm_stats$`%of shots 3pt`),]
+row <- which(hm_stats$Team == 'Team')
+TPAtt_perc <- round((1 - (row/363))*100,0)
+hm_stats <- hm_stats[order(-hm_stats$`%shots in transition`),]
+row <- which(hm_stats$Team == 'Team')
+TransShots_perc <- round((1 - (row/363))*100,0)
+hm_stats <- hm_stats[order(-hm_stats$`FG% at rim`),]
+row <- which(hm_stats$Team == 'Team')
+Rim_perc <- round((1 - (row/363))*100,0)
+hm_stats <- hm_stats[order(-hm_stats$`FG% 2pt Jumpers`),]
+row <- which(hm_stats$Team == 'Team')
+Mid_perc <- round((1 - (row/363))*100,0)
+hm_stats <- hm_stats[order(-hm_stats$`3FG%`),]
+row <- which(hm_stats$Team == 'Team')
+TP_perc <- round((1 - (row/363))*100,0)
+radar_tbl0 <- data.frame(Stat = c('FG% at Rim', 'FG% from Mid', '3FG%', 'Overall eFG%', 'Transition eFG%', 'Half-court eFG%', '% shots at Rim', '% shots from Mid', '% of shots 3pt', '% shots in Transition'),
+                         Value = c(team_data_hm$`FG% at rim`[1], team_data_hm$`FG% 2pt Jumpers`[1], team_data_hm$`3FG%`[1], team_data_hm$`eFG%`[1], team_data_hm$`Transition eFG%`[1], team_data_hm$`Non-Transition eFG%`[1], team_data_hm$`% shots at rim`[1], team_data_hm$`% shots 2p J`[1], team_data_hm$`%of shots 3pt`[1], team_data_hm$`%shots in transition`[1]),
+                         '%ile' = c(Rim_perc, Mid_perc, TP_perc, eFG_perc, TranseFG_perc, HalfeFG_perc, RimAtt_perc, MidAtt_perc, TPAtt_perc, TransShots_perc)
+                         )
+radar_chart0 <- radar_tbl0 %>%
+  gt() %>%
+  cols_label(Stat = md('**Stat**'), Value = md('**Value**'), X.ile = md('**%ile**')) %>%
+  gt_add_divider(Value) %>%
+  data_color(columns = c(X.ile), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn') %>% as.character(), domain = c(0,100))) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(savename1)
+
+hoopmath_f$`eFG%` <- as.numeric(hoopmath_f$`eFG%`)
+hoopmath_f$`Transition eFG%` <- sub('%$', '', hoopmath_f$`Transition eFG%`)
+hoopmath_f$`Non-Transition eFG%` <- sub('%$', '', hoopmath_f$`Non-Transition eFG%`)
+hoopmath_f$`Transition eFG%` <- as.numeric(hoopmath_f$`Transition eFG%`)
+hoopmath_f$`Non-Transition eFG%` <- as.numeric(hoopmath_f$`Non-Transition eFG%`)
+radar_tbl1 <- data.frame(Stat = c('Overall', 'Transition', 'Half-court'),
+                         Team = c(team_data_hm$`eFG%`[1], team_data_hm$`Transition eFG%`[1], team_data_hm$`Non-Transition eFG%`[1]),
+                         Avg = c(round(mean(hoopmath_f$`eFG%`),1), round(mean(hoopmath_f$`Transition eFG%`),1), round(mean(hoopmath_f$`Non-Transition eFG%`),1))
+                         )
+
+hoopmath_f$`% shots at rim` <- as.numeric(hoopmath_f$`% shots at rim`)
+hoopmath_f$`% shots 2p J` <- as.numeric(hoopmath_f$`% shots 2p J`)
+hoopmath_f$`%of shots 3pt` <- as.numeric(hoopmath_f$`%of shots 3pt`)
+hoopmath_f$`%shots in transition` <- as.numeric(hoopmath_f$`%shots in transition`)
+radar_tbl2 <- data.frame(Stat = c('Rim', 'Mid', '3pt', 'Transition'),
+                         Team = c(team_data_hm$`% shots at rim`[1], team_data_hm$`% shots 2p J`[1], team_data_hm$`%of shots 3pt`[1], team_data_hm$`%shots in transition`[1]),
+                         Avg = c(round(mean(hoopmath_f$`% shots at rim`),1), round(mean(hoopmath_f$`% shots 2p J`),1), round(mean(hoopmath_f$`%of shots 3pt`),1), round(mean(hoopmath_f$`%shots in transition`),1))
+                         )
+
+hoopmath_f$`FG% at rim` <- as.numeric(hoopmath_f$`FG% at rim`)
+hoopmath_f$`FG% 2pt Jumpers` <- as.numeric(hoopmath_f$`FG% 2pt Jumpers`)
+hoopmath_f$`3FG%` <- as.numeric(hoopmath_f$`3FG%`)
+radar_tbl3 <- data.frame(Stat = c('Rim', 'Mid', '3pt'),
+                         Team = c(team_data_hm$`FG% at rim`[1], team_data_hm$`FG% 2pt Jumpers`[1], team_data_hm$`3FG%`[1]),
+                         Avg = c(round(mean(hoopmath_f$`FG% at rim`),1), round(mean(hoopmath_f$`FG% 2pt Jumpers`),1), round(mean(hoopmath_f$`3FG%`),1))
+                         )
+
+minvalue1 <- pmin(radar_tbl1$Team, radar_tbl1$Avg)
+minvalue1 <- min(minvalue1) - 10
+radar_tbl1$Team <- radar_tbl1$Team - minvalue1
+radar_tbl1$Avg <- radar_tbl1$Avg - minvalue1
+maxvalue1 <- pmax(radar_tbl1$Team, radar_tbl1$Avg)
+maxvalue1 <- max(maxvalue1) + 10
+radar_chart1 <- ggplot(radar_tbl1, aes(x = Stat, y = Team)) +
+  geom_col(aes(fill = Stat), width = 1, alpha = 0.9, color = 'white') +
+  geom_point(aes(y = Avg), size = 3, color = "black") +
+  geom_segment(aes(x = Stat, y = 0, xend = Stat, yend = Avg), linetype = "dashed", color = "black") +
+  coord_polar(start = -pi/2, clip = "off") 
+radar_chart1 <- radar_chart1 +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    plot.background = element_rect(fill = "gray89", color = 'gray89'),
+    legend.position = "none",
+    axis.text.x = element_text(size = 12, face = "bold", color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank()
+    ) + 
+  labs(title = paste0(NCAA_team, ' | eFG%'),
+       subtitle = paste0("Dotted line represents league average.")
+       ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = 'black'),
+    plot.subtitle = element_text(color = 'black', size = 12, hjust = 0.5)
+    ) +
+  scale_fill_manual(values = c(color, color, color, color, color, color), guide = 'none')
+radar_chart1
+ggsave(plot = radar_chart1, filename = savename2)
+
+minvalue2 <- pmin(radar_tbl2$Team, radar_tbl2$Avg)
+minvalue2 <- min(minvalue2) - 10
+radar_tbl2$Team <- radar_tbl2$Team - minvalue2
+radar_tbl2$Avg <- radar_tbl2$Avg - minvalue2
+maxvalue2 <- pmax(radar_tbl2$Team, radar_tbl2$Avg)
+maxvalue2 <- max(maxvalue2) + 10
+radar_chart2 <- ggplot(radar_tbl2, aes(x = Stat, y = Team)) +
+  geom_col(aes(fill = Stat), width = 1, alpha = 0.9, color = 'white') +
+  geom_point(aes(y = Avg), size = 3, color = "black") +
+  geom_segment(aes(x = Stat, y = 0, xend = Stat, yend = Avg), linetype = "dashed", color = "black") +
+  coord_polar(start = -pi/2, clip = "off") 
+radar_chart2 <- radar_chart2 +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    plot.background = element_rect(fill = "gray89", color = 'gray89'),
+    legend.position = "none",
+    axis.text.x = element_text(size = 12, face = "bold", color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank()
+    ) + 
+  labs(title = paste0(NCAA_team, ' | Attempt Rates'),
+       subtitle = paste0("Dotted line represents league average.")
+       ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = 'black'),
+    plot.subtitle = element_text(color = 'black', size = 12, hjust = 0.5)
+    ) +
+  scale_fill_manual(values = c(color, color, color, color, color, color), guide = 'none')
+radar_chart2
+ggsave(plot = radar_chart2, filename = savename3)
+
+minvalue3 <- pmin(radar_tbl3$Team, radar_tbl3$Avg)
+minvalue3 <- min(minvalue3) - 10
+radar_tbl3$Team <- radar_tbl3$Team - minvalue3
+radar_tbl3$Avg <- radar_tbl3$Avg - minvalue3
+maxvalue3 <- pmax(radar_tbl3$Team, radar_tbl3$Avg)
+maxvalue3 <- max(maxvalue3) + 10
+radar_chart3 <- ggplot(radar_tbl3, aes(x = Stat, y = Team)) +
+  geom_col(aes(fill = Stat), width = 1, alpha = 0.9, color = 'white') +
+  geom_point(aes(y = Avg), size = 3, color = "black") +
+  geom_segment(aes(x = Stat, y = 0, xend = Stat, yend = Avg), linetype = "dashed", color = "black") +
+  coord_polar(start = -pi/2, clip = "off") 
+radar_chart3 <- radar_chart3 +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    plot.background = element_rect(fill = "gray89", color = 'gray89'),
+    legend.position = "none",
+    axis.text.x = element_text(size = 12, face = "bold", color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank()
+    ) + 
+  labs(title = paste0(NCAA_team, ' | FG%'),
+       subtitle = paste0("Dotted line represents league average.")
+       ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = 'black'),
+    plot.subtitle = element_text(color = 'black', size = 12, hjust = 0.5)
+    ) +
+  scale_fill_manual(values = c(color, color, color, color, color, color), guide = 'none')
+radar_chart3
+ggsave(plot = radar_chart3, filename = savename4)
+
+opp_data <- data %>%
+  filter(Team != NCAA_team)
+opp_data_hm <- opp_data %>%
+  mutate(
+    'eFG%' = round(((sum(opp_data$FGM)+(0.5*sum(opp_data$TPM)))/sum(opp_data$FGA))*100,1),
+    '% shots at rim' = round((sum(opp_data$RIMA)/sum(opp_data$FGA))*100,1),
+    'FG% at rim' = round((sum(opp_data$RIMM)/sum(opp_data$RIMA))*100,1),
+    '%assisted at rim' = NA,
+    '% shots 2p J' = round(mean(opp_data$MIDrate)*100,1),
+    'FG% 2pt Jumpers' = round(mean(opp_data$MID.)*100,1),
+    '%assisted 2pt Jumpers' = NA,
+    '%of shots 3pt' = round((sum(opp_data$TPA)/sum(opp_data$FGA))*100,1),
+    '3FG%' = round((sum(opp_data$TPM)/sum(opp_data$TPA))*100,1),
+    '%assisted 3pt' = NA,
+    '%shots in transition' = round((sum(opp_data$FGA_trans)/sum(opp_data$FGA))*100,1),
+    'Transition eFG%' = round(((sum(opp_data$FGM_trans)+(0.5*sum(opp_data$TPM_trans)))/sum(opp_data$FGA_trans))*100,1),
+    'Non-Transition eFG%' = round(((sum(opp_data$FGM_half)+(0.5*sum(opp_data$TPM_half)))/sum(opp_data$FGA_half))*100,1)
+  ) %>%
+  select(Team, 'eFG%', '% shots at rim', 'FG% at rim', '%assisted at rim', '% shots 2p J', 'FG% 2pt Jumpers', '%assisted 2pt Jumpers', '%of shots 3pt', '3FG%', '%assisted 3pt', '%shots in transition', 'Transition eFG%', 'Non-Transition eFG%')
+opp_data_hm <- opp_data_hm[nrow(opp_data_hm), ,drop = FALSE]
+opp_data_hm <- opp_data_hm[, -(1:3)]
+
+#merge
+opp_data_hm$Team = 'Team'
+hm_opp_stats <- rbind(hoopmath_f, opp_data_hm)
+hm_opp_stats$`Transition eFG%` <- sub('%$', '', hm_opp_stats$`Transition eFG%`)
+hm_opp_stats$`Non-Transition eFG%` <- sub('%$', '', hm_opp_stats$`Non-Transition eFG%`)
+hm_opp_stats$`eFG%` <- as.numeric(hm_opp_stats$`eFG%`)
+hm_opp_stats$`Transition eFG%` <- as.numeric(hm_opp_stats$`Transition eFG%`)
+hm_opp_stats$`Non-Transition eFG%` <- as.numeric(hm_opp_stats$`Non-Transition eFG%`)
+hm_opp_stats$`% shots at rim` <- as.numeric(hm_opp_stats$`% shots at rim`)
+hm_opp_stats$`% shots 2p J` <- as.numeric(hm_opp_stats$`% shots 2p J`)
+hm_opp_stats$`%of shots 3pt` <- as.numeric(hm_opp_stats$`%of shots 3pt`)
+hm_opp_stats$`%shots in transition` <- as.numeric(hm_opp_stats$`%shots in transition`)
+hm_opp_stats$`FG% at rim` <- as.numeric(hm_opp_stats$`FG% at rim`)
+hm_opp_stats$`FG% 2pt Jumpers` <- as.numeric(hm_opp_stats$`FG% 2pt Jumpers`)
+hm_opp_stats$`3FG%` <- as.numeric(hm_opp_stats$`3FG%`)
+hm_opp_stats <- hm_opp_stats[order(hm_opp_stats$`eFG%`),]
+row <- which(hm_opp_stats$Team == 'Team')
+eFG_perc <- round((1 - (row/363))*100,0)
+hm_opp_stats <- hm_opp_stats[order(hm_opp_stats$`Transition eFG%`),]
+row <- which(hm_opp_stats$Team == 'Team')
+TranseFG_perc <- round((1 - (row/363))*100,0)
+hm_opp_stats <- hm_opp_stats[order(hm_opp_stats$`Non-Transition eFG%`),]
+row <- which(hm_opp_stats$Team == 'Team')
+HalfeFG_perc <- round((1 - (row/363))*100,0)
+hm_opp_stats <- hm_opp_stats[order(hm_opp_stats$`% shots at rim`),]
+row <- which(hm_opp_stats$Team == 'Team')
+RimAtt_perc <- round((1 - (row/363))*100,0)
+hm_opp_stats <- hm_opp_stats[order(hm_opp_stats$`% shots 2p J`),]
+row <- which(hm_opp_stats$Team == 'Team')
+MidAtt_perc <- round((1 - (row/363))*100,0)
+hm_opp_stats <- hm_opp_stats[order(hm_opp_stats$`%of shots 3pt`),]
+row <- which(hm_opp_stats$Team == 'Team')
+TPAtt_perc <- round((1 - (row/363))*100,0)
+hm_opp_stats <- hm_opp_stats[order(hm_opp_stats$`%shots in transition`),]
+row <- which(hm_opp_stats$Team == 'Team')
+TransShots_perc <- round((1 - (row/363))*100,0)
+hm_opp_stats <- hm_opp_stats[order(hm_opp_stats$`FG% at rim`),]
+row <- which(hm_opp_stats$Team == 'Team')
+Rim_perc <- round((1 - (row/363))*100,0)
+hm_opp_stats <- hm_opp_stats[order(hm_opp_stats$`FG% 2pt Jumpers`),]
+row <- which(hm_opp_stats$Team == 'Team')
+Mid_perc <- round((1 - (row/363))*100,0)
+hm_opp_stats <- hm_opp_stats[order(hm_opp_stats$`3FG%`),]
+row <- which(hm_opp_stats$Team == 'Team')
+TP_perc <- round((1 - (row/363))*100,0)
+radar_tbl4 <- data.frame(Stat = c('FG% at Rim', 'FG% from Mid', '3FG%', 'Overall eFG%', 'Transition eFG%', 'Half-court eFG%', '% shots at Rim', '% shots from Mid', '% of shots 3pt', '% shots in Transition'),
+                         Value = c(opp_data_hm$`FG% at rim`[1], opp_data_hm$`FG% 2pt Jumpers`[1], opp_data_hm$`3FG%`[1], opp_data_hm$`eFG%`[1], opp_data_hm$`Transition eFG%`[1], opp_data_hm$`Non-Transition eFG%`[1], opp_data_hm$`% shots at rim`[1], opp_data_hm$`% shots 2p J`[1], opp_data_hm$`%of shots 3pt`[1], opp_data_hm$`%shots in transition`[1]),
+                         '%ile' = c(Rim_perc, Mid_perc, TP_perc, eFG_perc, TranseFG_perc, HalfeFG_perc, RimAtt_perc, MidAtt_perc, TPAtt_perc, TransShots_perc)
+                         )
+radar_chart4 <- radar_tbl4 %>%
+  gt() %>%
+  cols_label(Stat = md('**Stat**'), Value = md('**Value**'), X.ile = md('**%ile**')) %>%
+  gt_add_divider(Value) %>%
+  data_color(columns = c(X.ile), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn') %>% as.character(), domain = c(0,100))) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(savename5)
+
+radar_tbl5 <- data.frame(Stat = c('Overall', 'Transition', 'Half-court'),
+                         Team = c(opp_data_hm$`eFG%`[1], opp_data_hm$`Transition eFG%`[1], opp_data_hm$`Non-Transition eFG%`[1]),
+                         Avg = c(round(mean(hoopmath_f$`eFG%`),1), round(mean(hoopmath_f$`Transition eFG%`),1), round(mean(hoopmath_f$`Non-Transition eFG%`),1))
+                         )
+
+radar_tbl6 <- data.frame(Stat = c('Rim', 'Mid', '3pt', 'Transition'),
+                         Team = c(opp_data_hm$`% shots at rim`[1], opp_data_hm$`% shots 2p J`[1], opp_data_hm$`%of shots 3pt`[1], opp_data_hm$`%shots in transition`[1]),
+                         Avg = c(round(mean(hoopmath_f$`% shots at rim`),1), round(mean(hoopmath_f$`% shots 2p J`),1), round(mean(hoopmath_f$`%of shots 3pt`),1), round(mean(hoopmath_f$`%shots in transition`),1))
+                         )
+
+radar_tbl7 <- data.frame(Stat = c('Rim', 'Mid', '3pt'),
+                         Team = c(opp_data_hm$`FG% at rim`[1], opp_data_hm$`FG% 2pt Jumpers`[1], opp_data_hm$`3FG%`[1]),
+                         Avg = c(round(mean(hoopmath_f$`FG% at rim`),1), round(mean(hoopmath_f$`FG% 2pt Jumpers`),1), round(mean(hoopmath_f$`3FG%`),1))
+                         )
+
+minvalue1 <- pmin(radar_tbl5$Team, radar_tbl5$Avg)
+minvalue1 <- min(minvalue1) - 10
+radar_tbl5$Team <- radar_tbl5$Team - minvalue1
+radar_tbl5$Avg <- radar_tbl5$Avg - minvalue1
+maxvalue1 <- pmax(radar_tbl5$Team, radar_tbl5$Avg)
+maxvalue1 <- max(maxvalue1) + 10
+radar_chart5 <- ggplot(radar_tbl5, aes(x = Stat, y = Team)) +
+  geom_col(aes(fill = Stat), width = 1, alpha = 0.9, color = 'white') +
+  geom_point(aes(y = Avg), size = 3, color = "black") +
+  geom_segment(aes(x = Stat, y = 0, xend = Stat, yend = Avg), linetype = "dashed", color = "black") +
+  coord_polar(start = -pi/2, clip = "off") 
+radar_chart5 <- radar_chart5 +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    plot.background = element_rect(fill = "gray89", color = 'gray89'),
+    legend.position = "none",
+    axis.text.x = element_text(size = 12, face = "bold", color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank()
+    ) + 
+  labs(title = paste0(NCAA_team, ' Opponents | eFG%'),
+       subtitle = paste0("Dotted line represents league average.")
+       ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = 'black'),
+    plot.subtitle = element_text(color = 'black', size = 12, hjust = 0.5)
+    ) +
+  scale_fill_manual(values = c(color, color, color, color, color, color), guide = 'none')
+radar_chart5
+ggsave(plot = radar_chart5, filename = savename6)
+
+minvalue2 <- pmin(radar_tbl6$Team, radar_tbl6$Avg)
+minvalue2 <- min(minvalue2) - 10
+radar_tbl6$Team <- radar_tbl6$Team - minvalue2
+radar_tbl6$Avg <- radar_tbl6$Avg - minvalue2
+maxvalue2 <- pmax(radar_tbl6$Team, radar_tbl6$Avg)
+maxvalue2 <- max(maxvalue2) + 10
+radar_chart6 <- ggplot(radar_tbl6, aes(x = Stat, y = Team)) +
+  geom_col(aes(fill = Stat), width = 1, alpha = 0.9, color = 'white') +
+  geom_point(aes(y = Avg), size = 3, color = "black") +
+  geom_segment(aes(x = Stat, y = 0, xend = Stat, yend = Avg), linetype = "dashed", color = "black") +
+  coord_polar(start = -pi/2, clip = "off") 
+radar_chart6 <- radar_chart6 +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    plot.background = element_rect(fill = "gray89", color = 'gray89'),
+    legend.position = "none",
+    axis.text.x = element_text(size = 12, face = "bold", color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank()
+    ) + 
+  labs(title = paste0(NCAA_team, ' Opponents | Attempt Rates'),
+       subtitle = paste0("Dotted line represents league average.")
+       ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = 'black'),
+    plot.subtitle = element_text(color = 'black', size = 12, hjust = 0.5)
+    ) +
+  scale_fill_manual(values = c(color, color, color, color, color, color), guide = 'none')
+radar_chart6
+ggsave(plot = radar_chart6, filename = savename7)
+
+minvalue3 <- pmin(radar_tbl7$Team, radar_tbl7$Avg)
+minvalue3 <- min(minvalue3) - 10
+radar_tbl7$Team <- radar_tbl7$Team - minvalue3
+radar_tbl7$Avg <- radar_tbl7$Avg - minvalue3
+maxvalue3 <- pmax(radar_tbl7$Team, radar_tbl7$Avg)
+maxvalue3 <- max(maxvalue3) + 10
+radar_chart7 <- ggplot(radar_tbl7, aes(x = Stat, y = Team)) +
+  geom_col(aes(fill = Stat), width = 1, alpha = 0.9, color = 'white') +
+  geom_point(aes(y = Avg), size = 3, color = "black") +
+  geom_segment(aes(x = Stat, y = 0, xend = Stat, yend = Avg), linetype = "dashed", color = "black") +
+  coord_polar(start = -pi/2, clip = "off") 
+radar_chart7 <- radar_chart7 +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    plot.background = element_rect(fill = "gray89", color = 'gray89'),
+    legend.position = "none",
+    axis.text.x = element_text(size = 20, face = "bold", color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank()
+    ) + 
+  labs(title = paste0(NCAA_team, ' Opponents | FG%'),
+       subtitle = paste0("Dotted line represents league average.")
+       ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = 'black'),
+    plot.subtitle = element_text(color = 'black', size = 12, hjust = 0.5)
+    ) +
+  scale_fill_manual(values = c(color, color, color, color, color, color), guide = 'none')
+radar_chart7
+ggsave(plot = radar_chart7, filename = savename8)
+```
+
+#cbb data
+```{r}
+vik_data <- cbbdata::cbd_torvik_team_factors(year = 2024, no_bias = TRUE)
+team_vik <- vik_data %>%
+  filter(team == NCAA_team)
+team_conf <- team_vik$conf[1]
+conf_vik <- vik_data %>%
+  filter(conf == team_conf)
+
+conf_vik <- conf_vik[order(-conf_vik$adj_o),]
+conf_adjo_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(-vik_data$adj_o),]
+row <- which(vik_data$team == NCAA_team)
+adjo_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(conf_vik$adj_d),]
+conf_adjd_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(vik_data$adj_d),]
+row <- which(vik_data$team == NCAA_team)
+adjd_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(-conf_vik$efg),]
+conf_efg_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(-vik_data$efg),]
+row <- which(vik_data$team == NCAA_team)
+efg_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(conf_vik$def_efg),]
+conf_defg_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(vik_data$def_efg),]
+row <- which(vik_data$team == NCAA_team)
+defg_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(-conf_vik$oreb_rate),]
+conf_orb_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(-vik_data$oreb_rate),]
+row <- which(vik_data$team == NCAA_team)
+orb_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(-conf_vik$dreb_rate),]
+conf_drb_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(-vik_data$dreb_rate),]
+row <- which(vik_data$team == NCAA_team)
+drb_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(conf_vik$tov_rate),]
+conf_tov_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(vik_data$tov_rate),]
+row <- which(vik_data$team == NCAA_team)
+tov_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(-conf_vik$def_tov_rate),]
+conf_dtov_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(-vik_data$def_tov_rate),]
+row <- which(vik_data$team == NCAA_team)
+dtov_perc <- round((1 - (row/363))*100,0)
+
+fourfactor_tbl1 <- data.frame(Logo = c(logo, 'https://content.sportslogos.net/logos/153/4935/full/atlantic_10_conference_logo_secondary_20144281.png', 'https://www.apsrc.net/wp-content/uploads/2021/11/ncaa-4-logo-png-transparent.png'),
+                              Name = c(NCAA_team, 'A10 Rank', 'Overall %ile'),
+                              Record = c(paste0(team_vik$wins[1], '-', team_vik$losses[1]), '-', '-'),
+                              Off_rtg = c(round(team_vik$adj_o,1), conf_adjo_rank, adjo_perc),
+                              eFG = c(round(team_vik$efg,1), conf_efg_rank, efg_perc),
+                              ORB = c(round(team_vik$oreb_rate,1), conf_orb_rank, orb_perc),
+                              Tov = c(round(team_vik$tov_rate,1), conf_tov_rank, tov_perc),
+                              Def_rtg = c(round(team_vik$adj_d,1), conf_adjd_rank, adjd_perc),
+                              deFG = c(round(team_vik$def_efg,1), conf_defg_rank, defg_perc),
+                              DRB = c(round(team_vik$dreb_rate,1), conf_drb_rank, drb_perc),
+                              dTov = c(round(team_vik$def_tov_rate,1), conf_dtov_rank, dtov_perc)
+                                )
+
+ff_tbl1 <- fourfactor_tbl1 %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(Logo = '', Name = '', Record = md('**Record**'), Off_rtg = md('**Adj. Rating**'), eFG = md('**eFG%**'), ORB = md('**Reb Rate**'), Tov = md('**Tov Rate**'), Def_rtg = md('**Adj. Rating**'), deFG = md('**eFG%**'), DRB = md('**Reb Rate**'), dTov = md('**Tov Rate**')) %>%
+  tab_spanner(label = 'Offense', columns = c('Off_rtg', 'eFG', 'ORB', 'Tov')) %>%
+  tab_spanner(label = 'Defense', columns = c('Def_rtg', 'deFG', 'DRB', 'dTov')) %>%
+  gt_add_divider(Record) %>%
+  gt_add_divider(Tov, weight = px(4)) %>%
+  data_color(direction = 'row', rows = 2, columns = c('Off_rtg', 'eFG', 'ORB', 'Tov', 'Def_rtg', 'deFG', 'DRB', 'dTov'), colors = scales::col_numeric(palette = rev(paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn')) %>% as.character(), domain = c(1,15))) %>%
+  data_color(direction = 'row', rows = 3, columns = c('Off_rtg', 'eFG', 'ORB', 'Tov', 'Def_rtg', 'deFG', 'DRB', 'dTov'), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn') %>% as.character(), domain = c(1,100))) %>%
+  text_transform(locations = cells_body(vars(Logo)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_style(style = cell_text(weight = 'bold'), locations = cells_body(columns = c('Name'))) %>%
+  cols_width(Name ~ px(125), ORB ~ px(80), DRB ~ px(80), Tov ~ px(80), dTov ~ px(80)) %>%
+  gtsave(savename9)
+ff_tbl1
+
+conf_vik <- conf_vik[order(-conf_vik$ft_pct),]
+conf_ft_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(-vik_data$ft_pct),]
+row <- which(vik_data$team == NCAA_team)
+ft_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(-conf_vik$two_pt_pct),]
+conf_two_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(-vik_data$two_pt_pct),]
+row <- which(vik_data$team == NCAA_team)
+two_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(-conf_vik$three_pt_pct),]
+conf_three_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(-vik_data$three_pt_pct),]
+row <- which(vik_data$team == NCAA_team)
+three_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(-conf_vik$three_fg_rate),]
+conf_threerate_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(-vik_data$three_fg_rate),]
+row <- which(vik_data$team == NCAA_team)
+three_rate <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(-conf_vik$ftr),]
+conf_ftr_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(-vik_data$ftr),]
+row <- which(vik_data$team == NCAA_team)
+ft_rate <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(conf_vik$def_two_pt_pct),]
+conf_dtwo_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(vik_data$def_two_pt_pct),]
+row <- which(vik_data$team == NCAA_team)
+dtwo_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(conf_vik$def_three_pt_pct),]
+conf_dthree_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(vik_data$def_three_pt_pct),]
+row <- which(vik_data$team == NCAA_team)
+dthree_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(conf_vik$def_three_fg_rate),]
+conf_dthreerate_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(vik_data$def_three_fg_rate),]
+row <- which(vik_data$team == NCAA_team)
+dthree_rate <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(conf_vik$def_ft_pct),]
+conf_dft_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(vik_data$def_ft_pct),]
+row <- which(vik_data$team == NCAA_team)
+dft_perc <- round((1 - (row/363))*100,0)
+conf_vik <- conf_vik[order(conf_vik$def_ftr),]
+conf_dftr_rank <- which(conf_vik$team == NCAA_team)
+vik_data <- vik_data[order(vik_data$def_ftr),]
+row <- which(vik_data$team == NCAA_team)
+dft_rate <- round((1 - (row/363))*100,0)
+
+fourfactor_tbl2 <- data.frame(Logo = c(logo, 'https://content.sportslogos.net/logos/153/4935/full/atlantic_10_conference_logo_secondary_20144281.png', 'https://www.apsrc.net/wp-content/uploads/2021/11/ncaa-4-logo-png-transparent.png'),
+                              Name = c(NCAA_team, 'A10 Rank', 'Overall %ile'),
+                              two = c(round(team_vik$two_pt_pct,1), conf_two_rank, two_perc),
+                              three = c(round(team_vik$three_pt_pct,1), conf_three_rank, three_perc),
+                              three_rate = c(round(team_vik$three_fg_rate,1), conf_threerate_rank, three_rate),
+                              ft_per = c(round(team_vik$ft_pct,1), conf_ft_rank, ft_perc),
+                              ft_rat = c(round(team_vik$ftr,1), conf_ftr_rank, ft_rate),
+                              dtwo = c(round(team_vik$def_two_pt_pct,1), conf_dtwo_rank, dtwo_perc),
+                              dthree = c(round(team_vik$def_three_pt_pct,1), conf_dthree_rank, dthree_perc),
+                              dthree_rate = c(round(team_vik$def_three_fg_rate,1), conf_dthreerate_rank, dthree_rate),
+                              dft_per = c(round(team_vik$def_ft_pct,1), conf_dft_rank, dft_perc),
+                              dft_rat = c(round(team_vik$def_ftr,1), conf_dftr_rank, dft_rate)
+                              )
+
+ff_tbl2 <- fourfactor_tbl2 %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(Logo = '', Name = '', two = md('**2pt%**'), three = md('**3pt%**'), three_rate = md('**3pt Rate**'), ft_per = md('**FT%**'), ft_rat = md('**FT Rate**'), dtwo = md('**2pt%**'), dthree = md('**3pt%**'), dthree_rate = md('**3pt Rate**'), dft_per = md('**FT%**'), dft_rat = md('**FT Rate**')) %>%
+  tab_spanner(label = 'Offense', columns = c('two', 'three', 'three_rate', 'ft_per', 'ft_rat')) %>%
+  tab_spanner(label = 'Defense', columns = c('dtwo', 'dthree', 'dthree_rate', 'dft_per', 'dft_rat')) %>%
+  gt_add_divider(Name) %>%
+  gt_add_divider(ft_rat, weight = px(4)) %>%
+  data_color(direction = 'row', rows = 2, columns = c('two', 'three', 'three_rate', 'ft_per', 'ft_rat', 'dtwo', 'dthree', 'dthree_rate', 'dft_per', 'dft_rat'), colors = scales::col_numeric(palette = rev(paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn')) %>% as.character(), domain = c(1,15))) %>%
+  data_color(direction = 'row', rows = 3, columns = c('two', 'three', 'three_rate', 'ft_per', 'ft_rat', 'dtwo', 'dthree', 'dthree_rate', 'dft_per', 'dft_rat'), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn') %>% as.character(), domain = c(1,100))) %>%
+  text_transform(locations = cells_body(vars(Logo)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  tab_style(style = cell_text(weight = 'bold'), locations = cells_body(columns = c('Name'))) %>%
+  gtsave(savename10)
+ff_tbl2
+```
+
+#lineups
+```{r}
+lineups <- get_lineups(play_by_play_data = get_play_by_play(schedule$Game_ID), include_transition = T)
+
+opp_lineups <- lineups %>%
+  filter(Team == NCAA_team) %>%
+  arrange(desc(Mins))%>%
+  mutate(ORTG = round(ORTG,1),
+         DRTG = round(DRTG,1),
+         NETRTG = round(NETRTG,1),
+         Mins = round(Mins,0),
+         P1 = sub("^\\S+\\s+", '', gsub(".", " ", P1, fixed=TRUE)),
+         P2 = sub("^\\S+\\s+", '', gsub(".", " ", P2, fixed=TRUE)),
+         P3 = sub("^\\S+\\s+", '', gsub(".", " ", P3, fixed=TRUE)),
+         P4 = sub("^\\S+\\s+", '', gsub(".", " ", P4, fixed=TRUE)),
+         P5 = sub("^\\S+\\s+", '', gsub(".", " ", P5, fixed=TRUE)),
+         Lineup = paste0(P1, " - ", P2," - ", P3," - ", P4," - ", P5)) %>%
+  slice(1:10) %>%
+  select(Lineup, Mins, ORTG, DRTG, NETRTG)
+blah <- vik_data %>%
+  mutate(
+    net_rtg = adj_o - adj_d
+  )
+net_min <- pmin(blah$net_rtg, opp_lineups$NETRTG)
+net_min <- min(net_min)
+net_max <- pmax(blah$net_rtg, opp_lineups$NETRTG)
+net_max <- max(net_max)
+ortg_min <- pmin(blah$adj_o, opp_lineups$ORTG)
+ortg_min <- min(ortg_min)
+ortg_max <- pmax(blah$adj_o, opp_lineups$ORTG)
+ortg_max <- max(ortg_max)
+drtg_min <- pmin(blah$adj_d, opp_lineups$DRTG)
+drtg_min <- min(drtg_min)
+drtg_max <- pmax(blah$adj_d, opp_lineups$DRTG)
+drtg_max <- max(drtg_max)
+lineup_table <- opp_lineups %>%
+  gt() %>%
+  cols_label(Lineup = md('**Lineup**'), Mins = md('**Mins**'), ORTG = md('**ORtg.**'), DRTG = md('**DRtg.**'), NETRTG = md('**Net Rtg.**')) %>%
+  data_color(columns = c(NETRTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(net_min,net_max))) %>%
+  data_color(columns = c(ORTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(ortg_min,ortg_max))) %>%
+  data_color(columns = c(DRTG), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = -1) %>% as.character(), domain = c(drtg_min,drtg_max))) %>%
+  cols_align(align = 'center', columns = vars(Lineup)) %>%
+  cols_align(align = 'left', columns = vars(NETRTG, ORTG, DRTG)) %>%
+  cols_width(vars(Lineup) ~ px(500)) %>%
+  gt_add_divider(Lineup) %>%
+  opt_row_striping() %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(savename11)
+lineup_table
+
+opp_lineups2 <- lineups %>%
+  filter(Team == NCAA_team) %>%
+  arrange(desc(Mins))%>%
+  mutate(Mins = round(Mins,0),
+         eFG. = round(eFG.*100,1),
+         deFG. = round(deFG.*100,1),
+         RIM. = round(RIM.*100,1),
+         RIMrate = round(RIMrate*100,1),
+         dRIM. = round(dRIM.*100,1),
+         dRIMrate = round(dRIMrate*100,1),
+         MID. = round(MID.*100,1),
+         MIDrate = round(MIDrate*100,1),
+         dMID. = round(dMID.*100,1),
+         dMIDrate = round(dMIDrate*100,1),
+         TPP = round(TPP*100,1),
+         dTPP = round(dTPP*100,1),
+         TPrate = round(TPrate*100,1),
+         dTPrate = round(dTPrate*100,1),
+         P1 = sub("^\\S+\\s+", '', gsub(".", " ", P1, fixed=TRUE)),
+         P2 = sub("^\\S+\\s+", '', gsub(".", " ", P2, fixed=TRUE)),
+         P3 = sub("^\\S+\\s+", '', gsub(".", " ", P3, fixed=TRUE)),
+         P4 = sub("^\\S+\\s+", '', gsub(".", " ", P4, fixed=TRUE)),
+         P5 = sub("^\\S+\\s+", '', gsub(".", " ", P5, fixed=TRUE)),
+         Lineup = paste0(P1, " - ", P2," - ", P3," - ", P4," - ", P5)) %>%
+  slice(1:10) %>%
+  select(Lineup, Mins, eFG., RIM., RIMrate, MID., MIDrate, TPP, TPrate)
+lineup_table2 <- opp_lineups2 %>%
+  gt() %>%
+  cols_label(Lineup = md('**Lineup**'), Mins = md('**Mins**'),eFG. = md('**eFG%**'), RIM. = md('**%**'), RIMrate = md('**Att.**'), MID. = md('**%**'), MIDrate = md('**Att.**'), TPP = md('**%**'), TPrate = md('**Att.**')) %>%
+  data_color(columns = c(eFG.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = c(min(opp_lineups2$eFG.),mean(blah$efg),max(opp_lineups2$eFG.)))) %>%
+  cols_align(align = 'center', columns = vars(Lineup)) %>%
+  cols_align(align = 'center', columns = vars(Mins)) %>%
+  cols_align(align = 'right', columns = vars(eFG., RIM., RIMrate, MID., MIDrate, TPP, TPrate)) %>%
+  cols_width(vars(Lineup) ~ px(500)) %>%
+  opt_row_striping() %>%
+  gt_add_divider(Mins) %>%
+  gt_add_divider(eFG.) %>%
+  gt_add_divider(RIMrate) %>%
+  gt_add_divider(MIDrate) %>%
+  tab_spanner(label = 'Rim', columns = vars(RIM., RIMrate)) %>%
+  tab_spanner(label = 'Mid', columns = vars(MID., MIDrate)) %>%
+  tab_spanner(label = '3pt', columns = vars(TPP, TPrate)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(savename12)
+lineup_table2
+
+opp_lineups3 <- lineups %>%
+  filter(Team == NCAA_team) %>%
+  arrange(desc(Mins))%>%
+  mutate(Mins = round(Mins,0),
+         deFG. = round(deFG.*100,1),
+         dRIM. = round(dRIM.*100,1),
+         dRIMrate = round(dRIMrate*100,1),
+         dMID. = round(dMID.*100,1),
+         dMIDrate = round(dMIDrate*100,1),
+         dTPP = round(dTPP*100,1),
+         dTPrate = round(dTPrate*100,1),
+         P1 = sub("^\\S+\\s+", '', gsub(".", " ", P1, fixed=TRUE)),
+         P2 = sub("^\\S+\\s+", '', gsub(".", " ", P2, fixed=TRUE)),
+         P3 = sub("^\\S+\\s+", '', gsub(".", " ", P3, fixed=TRUE)),
+         P4 = sub("^\\S+\\s+", '', gsub(".", " ", P4, fixed=TRUE)),
+         P5 = sub("^\\S+\\s+", '', gsub(".", " ", P5, fixed=TRUE)),
+         Lineup = paste0(P1, " - ", P2," - ", P3," - ", P4," - ", P5)) %>%
+  slice(1:10) %>%
+  select(Lineup, Mins, deFG., dRIM., dRIMrate, dMID., dMIDrate, dTPP, dTPrate)
+lineup_table3 <- opp_lineups3 %>%
+  gt() %>%
+  cols_label(Lineup = md('**Lineup**'), Mins = md('**Mins**'),deFG. = md('**eFG%**'), dRIM. = md('**%**'), dRIMrate = md('**Att.**'), dMID. = md('**%**'), dMIDrate = md('**Att.**'), dTPP = md('**%**'), dTPrate = md('**Att.**')) %>%
+  data_color(columns = c(deFG.), colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = -1) %>% as.character(), domain = c(min(opp_lineups3$deFG.),mean(blah$def_efg),max(opp_lineups3$deFG.)))) %>%
+  cols_align(align = 'center', columns = vars(Lineup)) %>%
+  cols_align(align = 'center', columns = vars(Mins)) %>%
+  cols_align(align = 'right', columns = vars(deFG., dRIM., dRIMrate, dMID., dMIDrate, dTPP, dTPrate)) %>%
+  cols_width(vars(Lineup) ~ px(500)) %>%
+  opt_row_striping() %>%
+  gt_add_divider(Mins) %>%
+  gt_add_divider(deFG.) %>%
+  gt_add_divider(dRIMrate) %>%
+  gt_add_divider(dMIDrate) %>%
+  tab_spanner(label = 'Rim', columns = vars(dRIM., dRIMrate)) %>%
+  tab_spanner(label = 'Mid', columns = vars(dMID., dMIDrate)) %>%
+  tab_spanner(label = '3pt', columns = vars(dTPP, dTPrate)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(savename13)
+lineup_table3
+```
+
+#home & away
+```{r}
+home <- c()
+away <- c()
+neutral <- c()
+for (i in 1:nrow(schedule)) {
+  if (schedule$isNeutral[i] == TRUE) {
+    neutral <- c(neutral, schedule$Game_ID[i])
+  }
+}
+schedule_n <- schedule
+if (!is.null(neutral)) {
+  schedule_n <- schedule_n[-neutral,]
+}
+for (i in 1:nrow(schedule_n)) {
+  if (schedule_n$Home[i] == NCAA_team) {
+    home <- c(home, schedule_n$Game_ID[i])
+  } else if (schedule_n$Away[i] == NCAA_team) {
+    away <- c(away, schedule_n$Game_ID[i])
+  }
+}
+H_stats <- get_team_stats(play_by_play_data = get_play_by_play(game_ids = home), include_transition = T)
+A_stats <- get_team_stats(play_by_play_data = get_play_by_play(game_ids = away), include_transition = T)
+
+data_n <- data %>%
+  filter(Team == NCAA_team)
+
+H_rim. <- round((sum(H_stats$RIMM)/sum(H_stats$RIMA))*100,1)
+H_mid. <- round(((sum(H_stats$FGM) - (sum(H_stats$RIMM) + sum(H_stats$TPM)))/(sum(H_stats$FGA) - (sum(H_stats$RIMA) + sum(H_stats$TPA))))*100,1)
+H_tp. <- round((sum(H_stats$TPM)/sum(H_stats$TPA))*100,1)
+T_rim. <- round((sum(data_n$RIMM)/sum(data_n$RIMA))*100,1)
+T_mid. <- round(((sum(data_n$FGM) - (sum(data_n$RIMM) + sum(data_n$TPM)))/(sum(data_n$FGA) - (sum(data_n$RIMA) + sum(data_n$TPA))))*100,1)
+T_tp. <- round((sum(data_n$TPM)/sum(data_n$TPA))*100,1)
+H_radar1 <- data.frame(Stat = c('Rim%', 'Mid%', '3pt%'),
+                       Value = c(H_rim., H_mid., H_tp.),
+                       Avg = c(T_rim., T_mid., T_tp.))
+radar_home1 <- ggplot(H_radar1, aes(x = Stat, y = Value)) +
+  geom_col(aes(fill = Stat), width = 1, alpha = 0.9, color = 'white') +
+  geom_point(aes(y = Avg), size = 3, color = "black") +
+  geom_segment(aes(x = Stat, y = 0, xend = Stat, yend = Avg), linetype = "dashed", color = "black") +
+  coord_polar(start = -pi/2, clip = "off") 
+radar_home1 <- radar_home1 +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    plot.background = element_rect(fill = "gray89", color = 'gray89'),
+    legend.position = "none",
+    axis.text.x = element_text(size = 20, face = "bold", color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank()
+    ) + 
+  labs(title = paste0(NCAA_team, ' Home | Efficiency'),
+       subtitle = paste0("Dotted line represents teams season long average.")
+       ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = 'black'),
+    plot.subtitle = element_text(color = 'black', size = 12, hjust = 0.5)
+    ) +
+  scale_fill_manual(values = c(color, color, color, color, color, color), guide = 'none')
+radar_home1
+ggsave(plot = radar_home1, filename = savename14)
+
+H_efg <- round(((sum(H_stats$FGM)+(0.5*(sum(H_stats$TPM))))/(sum(H_stats$FGA)))*100,1)
+H_trans_fg <- round((sum(H_stats$FGM_trans)/sum(H_stats$FGA_trans))*100,1)
+H_ft <- round((sum(H_stats$FTM)/sum(H_stats$FTA))*100,1)
+T_efg <- round(((sum(data_n$FGM)+(0.5*(sum(data_n$TPM))))/(sum(data_n$FGA)))*100,1)
+T_trans_fg <- round((sum(data_n$FGM_trans)/sum(data_n$FGA_trans))*100,1)
+T_ft <- round((sum(data_n$FTM)/sum(data_n$FTA))*100,1)
+H_radar2 <- data.frame(Stat = c('eFG%', 'Transition FG%', 'FT%'),
+                       Value = c(H_efg, H_trans_fg, H_ft),
+                       Avg = c(T_efg, T_trans_fg, T_ft))
+radar_home2 <- ggplot(H_radar2, aes(x = Stat, y = Value)) +
+  geom_col(aes(fill = Stat), width = 1, alpha = 0.9, color = 'white') +
+  geom_point(aes(y = Avg), size = 3, color = "black") +
+  geom_segment(aes(x = Stat, y = 0, xend = Stat, yend = Avg), linetype = "dashed", color = "black") +
+  coord_polar(start = -pi/2, clip = "off") 
+radar_home2 <- radar_home2 +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    plot.background = element_rect(fill = "gray89", color = 'gray89'),
+    legend.position = "none",
+    axis.text.x = element_text(size = 20, face = "bold", color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank()
+    ) + 
+  labs(title = paste0(NCAA_team, ' Home | Efficiency'),
+       subtitle = paste0("Dotted line represents teams season long average.")
+       ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = 'black'),
+    plot.subtitle = element_text(color = 'black', size = 12, hjust = 0.5)
+    ) +
+  scale_fill_manual(values = c(color, color, color, color, color, color), guide = 'none')
+radar_home2
+ggsave(plot = radar_home2, filename = savename15)
+
+A_rim. <- round((sum(A_stats$RIMM)/sum(A_stats$RIMA))*100,1)
+A_mid. <- round(((sum(A_stats$FGM) - (sum(A_stats$RIMM) + sum(A_stats$TPM)))/(sum(A_stats$FGA) - (sum(A_stats$RIMA) + sum(A_stats$TPA))))*100,1)
+A_tp. <- round((sum(A_stats$TPM)/sum(A_stats$TPA))*100,1)
+A_radar1 <- data.frame(Stat = c('Rim%', 'Mid%', '3pt%'),
+                       Value = c(A_rim., A_mid., A_tp.),
+                       Avg = c(T_rim., T_mid., T_tp.))
+radar_away1 <- ggplot(A_radar1, aes(x = Stat, y = Value)) +
+  geom_col(aes(fill = Stat), width = 1, alpha = 0.9, color = 'white') +
+  geom_point(aes(y = Avg), size = 3, color = "black") +
+  geom_segment(aes(x = Stat, y = 0, xend = Stat, yend = Avg), linetype = "dashed", color = "black") +
+  coord_polar(start = -pi/2, clip = "off") 
+radar_away1 <- radar_away1 +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    plot.background = element_rect(fill = "gray89", color = 'gray89'),
+    legend.position = "none",
+    axis.text.x = element_text(size = 20, face = "bold", color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank()
+    ) + 
+  labs(title = paste0(NCAA_team, ' Away | Efficiency'),
+       subtitle = paste0("Dotted line represents teams season long average.")
+       ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = 'black'),
+    plot.subtitle = element_text(color = 'black', size = 12, hjust = 0.5)
+    ) +
+  scale_fill_manual(values = c(color, color, color, color, color, color), guide = 'none')
+radar_away1
+ggsave(plot = radar_away1, filename = savename16)
+
+A_efg <- round(((sum(A_stats$FGM)+(0.5*(sum(A_stats$TPM))))/(sum(A_stats$FGA)))*100,1)
+A_trans_fg <- round((sum(A_stats$FGM_trans)/sum(A_stats$FGA_trans))*100,1)
+A_ft <- round((sum(A_stats$FTM)/sum(A_stats$FTA))*100,1)
+A_radar2 <- data.frame(Stat = c('eFG%', 'Transition FG%', 'FT%'),
+                       Value = c(A_efg, A_trans_fg, A_ft),
+                       Avg = c(T_efg, T_trans_fg, T_ft))
+radar_away2 <- ggplot(A_radar2, aes(x = Stat, y = Value)) +
+  geom_col(aes(fill = Stat), width = 1, alpha = 0.9, color = 'white') +
+  geom_point(aes(y = Avg), size = 3, color = "black") +
+  geom_segment(aes(x = Stat, y = 0, xend = Stat, yend = Avg), linetype = "dashed", color = "black") +
+  coord_polar(start = -pi/2, clip = "off") 
+radar_away2 <- radar_away2 +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_line(color = "white", size = 0.5),
+    plot.background = element_rect(fill = "gray89", color = 'gray89'),
+    legend.position = "none",
+    axis.text.x = element_text(size = 20, face = "bold", color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank()
+    ) + 
+  labs(title = paste0(NCAA_team, ' Away | Efficiency'),
+       subtitle = paste0("Dotted line represents teams season long average.")
+       ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = 'black'),
+    plot.subtitle = element_text(color = 'black', size = 12, hjust = 0.5)
+    ) +
+  scale_fill_manual(values = c(color, color, color, color, color, color), guide = 'none')
+radar_away2
+ggsave(plot = radar_away2, filename = savename17)
+
+home_away_radar_table <- data.frame(Logo = c(logo, 'https://cdn-icons-png.flaticon.com/512/25/25694.png', 'https://toppng.com/uploads/preview/curvy-road-png-image-royalty-free-download-transparent-cartoon-windy-road-115628673545e5d4iymcx.png'),
+                                    Name = c(NCAA_team, 'Home', 'Away'),
+                                    Rim. = c(T_rim., H_rim., A_rim.),
+                                    Mid. = c(T_mid., H_mid., A_mid.),
+                                    TP. = c(T_tp., H_tp., A_tp.),
+                                    eFG. = c(T_efg, H_efg, A_efg),
+                                    Trans = c(T_trans_fg, H_trans_fg, A_trans_fg),
+                                    FT. = c(T_ft, H_ft, A_ft))
+h_a_rad_tbl <- home_away_radar_table %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_label(Logo = '', Name = '', Rim. = md('**Rim%**'), Mid. = md('**Mid%**'), TP. = md('**3pt%**'), eFG. = md('**eFG%**'), Trans = md('**Transition FG%**'), FT. = md('**FT%**')) %>%
+  text_transform(locations = cells_body(vars(Logo)), fn = function(x) {web_image(url = x, height = px(22.5))}) %>%
+  gt_add_divider(Name) %>%
+  data_color(columns = c(Rim., Mid., TP., eFG., Trans, FT.), rows = c(2,3),colors = scales::col_numeric(palette = paletteer::paletteer_d(palette = 'RColorBrewer::RdYlGn', direction = 1) %>% as.character(), domain = NULL)) %>%
+  tab_options(table.background.color = 'gray89', heading.background.color = 'gray89', column_labels.background.color = 'gray89') %>%
+  gtsave(savename18)
+h_a_rad_tbl
+```
+
+#report cards
+```{r}
+Team <- NCAA_team
+all_stats <- c('adj_o', 'adj_d', 'efg', 'def_efg', 'ftr', 'def_ftr', 'oreb_rate', 'dreb_rate', 'tov_rate', 'def_tov_rate', 'two_pt_pct', 'three_pt_pct', 'ft_pct', 'def_two_pt_pct', 'def_three_pt_pct', 'def_ft_pct', 'three_fg_rate', 'def_three_fg_rate', 'assist_rate', 'def_assist_rate')
+hm <- c('ACC', 'BE', 'B10', 'B12', 'P12', 'SEC')
+mm <- c('MWC', 'A10', 'Amer', 'MVC', 'WCC', 'Ivy', 'CUSA', 'SC')
+reverse_cols <- c('adj_d_', 'def_efg_', 'def_ftr_', 'tov_rate_', 'def_two_pt_pct_', 'def_three_pt_pct_', 'def_ft_pct_', 'def_three_fg_rate_', 'def_assist_rate_')
+data <- cbd_torvik_team_factors(year = 2024)
+
+data <- data %>%
+  mutate(
+    conf_group = case_when(conf %in% hm ~ 'High-Majors', conf %in% mm ~ 'Mid-Majors', .default = 'Low-Majors')
+  ) %>%
+  select(all_of(c('team', 'conf', 'conf_group', all_stats))) %>%
+  mutate(across(-c(team, conf, conf_group), percent_rank, .names = '{.col}_ptile')) %>%
+  mutate(across(-c(team, conf), percent_rank, .names = '{.col}_conf_ptile'), .by = c(conf_group)) %>%
+  mutate(across(all_of(starts_with(reverse_cols)), ~1 - .x))
+
+team_data <- data %>%
+  filter(team == Team)
+team_df <- data.frame(Team = c(team_data$team),
+                      Conf = c(team_data$conf),
+                      Conf_group = c(team_data$conf_group),
+                      Stat = c('adj_o', 'efg', 'ft_pct', 'ftr', 'two_pt_pct', 'three_pt_pct', 'three_fg_rate', 'oreb_rate', 'tov_rate', 'assist_rate', 'adj_d', 'def_efg', 'def_ft_pct', 'def_ftr', 'def_two_pt_pct', 'def_three_pt_pct', 'def_three_fg_rate', 'dreb_rate', 'def_tov_rate', 'def_assist_rate'),
+                      raw = c(team_data$adj_o, team_data$efg, team_data$ft_pct, team_data$ftr, team_data$two_pt_pct, team_data$three_pt_pct, team_data$three_fg_rate, team_data$oreb_rate, team_data$tov_rate, team_data$assist_rate, team_data$adj_d, team_data$def_efg, team_data$def_ft_pct, team_data$def_ftr, team_data$def_two_pt_pct, team_data$def_three_pt_pct, team_data$def_three_fg_rate, team_data$dreb_rate, team_data$def_tov_rate, team_data$def_assist_rate),
+                      ptile = c(team_data$adj_o_ptile, team_data$efg_ptile, team_data$ft_pct_ptile, team_data$ftr_ptile, team_data$two_pt_pct_ptile, team_data$three_pt_pct_ptile, team_data$three_fg_rate_ptile, team_data$oreb_rate_ptile, team_data$tov_rate_ptile, team_data$assist_rate_ptile, team_data$adj_d_ptile, team_data$def_efg_ptile, team_data$def_ft_pct_ptile, team_data$def_ftr_ptile, team_data$def_two_pt_pct_ptile, team_data$def_three_pt_pct_ptile, team_data$def_three_fg_rate_ptile, team_data$dreb_rate_ptile, team_data$def_tov_rate_ptile, team_data$def_assist_rate_ptile),
+                      conf_ptile = c(team_data$adj_o_conf_ptile, team_data$efg_conf_ptile, team_data$ft_pct_conf_ptile, team_data$ftr_conf_ptile, team_data$two_pt_pct_conf_ptile, team_data$three_pt_pct_conf_ptile, team_data$three_fg_rate_conf_ptile, team_data$oreb_rate_conf_ptile, team_data$tov_rate_conf_ptile, team_data$assist_rate_conf_ptile, team_data$adj_d_conf_ptile, team_data$def_efg_conf_ptile, team_data$def_ft_pct_conf_ptile, team_data$def_ftr_conf_ptile, team_data$def_two_pt_pct_conf_ptile, team_data$def_three_pt_pct_conf_ptile, team_data$def_three_fg_rate_conf_ptile, team_data$dreb_rate_conf_ptile, team_data$def_tov_rate_conf_ptile, team_data$def_assist_rate_conf_ptile),
+                      plot_name = c('Off. Rating', 'eFG%', 'FT%', 'FTA/FGA', '2pt%', '3pt%', '3FGA/FGA', 'ORB%', 'TOV%','AST%', 'Def. Rating', 'eFG%', 'FT%', 'FTA/FGA', '2pt%', '3pt%', '3FGA/FGA', 'DRB%', 'TOV%','AST%'),
+                      group = c('Offense', 'Offense', 'Offense', 'Offense', 'Offense', 'Offense', 'Offense', 'Offense', 'Offense','Offense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense', 'Defense'))
+team_df <- team_df %>%
+  mutate(
+    natl_grade = case_when(
+      ptile >= 0.95 ~ "A+",
+        ptile >= 0.90 ~ "A",
+        ptile >= 0.85 ~ "A-",
+        ptile >= 0.80 ~ "B+",
+        ptile >= 0.75 ~ "B",
+        ptile >= 0.70 ~ "B-",
+        ptile >= 0.65 ~ "C+",
+        ptile >= 0.60 ~ "C",
+        ptile >= 0.55 ~ "C-",
+        ptile >= 0.50 ~ "D+",
+        ptile >= 0.45 ~ "D",
+        ptile >= 0.40 ~ "D-",
+        .default = "F"
+    )
+  )
+
+team_stuff <- cbd_teams() %>% filter(torvik_team == Team)
+conf_thing <- team_df$Conf_group %>% unique()
+font <- 'Spline Sans Mono'
+title_text = glue('Team Report Card: {Team}')
+subtitle_text = glue('Data per Barttorvik through {format(Sys.Date(), "%b %e, %Y")}')
+title_header <- glue(
+  "<div style='display: flex; justify-content: space-between; align-items: center; background-color: #e2e2e2; padding: 10px; border-radius: 5px;'>
+    <div style='flex-grow: 1; text-align: center; display: flex; align-items: center;'>
+      <div style='margin-right: 10px;'>
+        <img src='{conf_logo}' style='height: 50px; width: auto; vertical-align: middle;'>
+      </div>
+      <div style='flex-grow: 1; text-align: center;'>
+        <span style='font-family: Arial, sans-serif; font-weight: bold; font-size: 28px; line-height: 1.2;'>{title_text}</span><br>
+        <span style='font-family: 'Times New Roman', serif; font-size: 18px; font-weight: normal; line-height: 1.2;'>{subtitle_text}</span>
+      </div>
+    </div>
+    <div>
+      <img src='{team_stuff$logo}' style='height: 65px; width: auto; vertical-align: middle;'>
+    </div>
+  </div>"
+)
+
+table <- team_df %>%
+  group_by(group) %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_hide(c(Team, Conf, Conf_group, Stat)) %>% 
+  cols_move_to_start(plot_name) %>% 
+  cols_width(ptile ~ px(225), conf_ptile ~ px(225), plot_name ~ px(110)) %>% 
+  cols_align(columns = c(everything(), -plot_name), 'center') %>% 
+  cols_align(columns = c(plot_name), 'left') %>% 
+  gt_bars(ptile, labels = TRUE, fill = team_stuff$color, domain = 0:1, digits = 0) %>% 
+  gt_bars(conf_ptile, labels = TRUE, fill = team_stuff$color, domain = 0:1, digits = 0) %>%
+  fmt_number(columns = raw, rows = everything(), decimals = 1) %>% 
+  gt_add_divider(raw, color = 'black', include_labels = FALSE) %>%
+  gt_add_divider(conf_ptile, color = 'black', include_labels = FALSE) %>%
+  cols_label(plot_name = 'Stat', raw = 'Value', ptile = 'National', conf_ptile = conf_thing, natl_grade = 'Grade') %>%
+  tab_style(locations = cells_row_groups(), style = cell_text(weight = 'bold')) %>%
+  tab_style(locations = cells_row_groups(), style = list(cell_fill(color = 'gray89'),cell_text(font = google_font(font), align = 'center', transform = 'uppercase', size = 20))) %>%
+  tab_spanner(columns = ends_with('ptile'), label = glue('Percentile relative to...')) %>% 
+  tab_options(data_row.padding = 3.5) %>%
+  tab_header(title = html(title_header)) %>%
+  gtsave(savename19)
+table
+
+#--
+Team2 <- Team
+
+season_avgs <- cbd_torvik_player_season(year = 2024)
+
+season_avgs <- season_avgs %>%
+  mutate(
+    conf_group = case_when(conf %in% hm ~ 'High-Majors', conf %in% mm ~ 'Mid-Majors',
+                           .default = 'Low-Majors'),
+    pos_group = case_when(pos %in% c('Combo G', 'Pure PG', 'Scoring PG') ~ 'Guard',
+                          pos %in% c('Wing F', 'Wing G', 'Stretch 4') ~ 'Wing',
+                          pos %in% c('C', 'PF/C') ~ 'Big')
+  )
+season_avgs <- season_avgs %>%
+  mutate(
+    player = paste0(player, ' (', pos_group, ')')
+  )
+
+all_stats <- c('bpm', 'porpag', 'efg', 'ast_to', 'ft_pct', 'rpg', 'fg_pct')
+
+season_avgs <- season_avgs %>%
+  select(all_of(c('player', 'team', 'conf', 'conf_group', 'pos_group', 'mpg', all_stats))) %>%
+  mutate(across(-c(player, team, conf, conf_group, mpg), percent_rank, .names = '{.col}_ptile'), .by = c(pos_group)) %>%
+  mutate(across(-c(player, team, conf, mpg), percent_rank, .names = '{.col}_conf_ptile'), .by = c(conf_group, pos_group))
+
+player_data <- season_avgs %>%
+  filter(team == Team2) %>%
+  top_n(5, wt = mpg)
+
+player_data <- player_data %>%
+  mutate(
+    ft_pct = ft_pct * 100,
+    fg_pct = fg_pct * 100
+  )
+
+player_dfs <- c()
+for (i in 1:nrow(player_data)) {
+  if (player_data$pos_group[i] == 'Guard') {
+    player_i_data <- player_data[i,c('player', 'team', 'conf', 'conf_group', 'bpm', 'bpm_ptile', 'bpm_conf_ptile', 'porpag', 'porpag_ptile', 'porpag_conf_ptile', 'efg', 'efg_ptile', 'efg_conf_ptile', 'ast_to', 'ast_to_ptile', 'ast_to_conf_ptile', 'ft_pct', 'ft_pct_ptile', 'ft_pct_conf_ptile')]
+    player_i_data$name1 <- c('Box +/-')
+    player_i_data$name2 <- c('PORPAG')
+    player_i_data$name3 <- c('eFG%')
+    player_i_data$name4 <- c('Ast/Tov')
+    player_i_data$name5 <- c('FT%')
+    player_dfs[[paste0('player_',i)]] <- player_i_data
+  } else if (player_data$pos_group[i] == 'Wing') {
+    player_i_data <- player_data[i,c('player', 'team', 'conf', 'conf_group', 'bpm', 'bpm_ptile', 'bpm_conf_ptile', 'porpag', 'porpag_ptile', 'porpag_conf_ptile', 'efg', 'efg_ptile', 'efg_conf_ptile', 'rpg', 'rpg_ptile', 'rpg_conf_ptile', 'ft_pct', 'ft_pct_ptile', 'ft_pct_conf_ptile')]
+    player_i_data$name1 <- c('Box +/-')
+    player_i_data$name2 <- c('PORPAG')
+    player_i_data$name3 <- c('eFG%')
+    player_i_data$name4 <- c('Rebounds')
+    player_i_data$name5 <- c('FT%')
+    player_dfs[[paste0('player_',i)]] <- player_i_data
+  } else {
+    player_i_data <- player_data[i,c('player', 'team', 'conf', 'conf_group', 'bpm', 'bpm_ptile', 'bpm_conf_ptile', 'porpag', 'porpag_ptile', 'porpag_conf_ptile', 'fg_pct', 'fg_pct_ptile', 'fg_pct_conf_ptile', 'rpg', 'rpg_ptile', 'rpg_conf_ptile', 'ft_pct', 'ft_pct_ptile', 'ft_pct_conf_ptile')]
+    player_i_data$name1 <- c('Box +/-')
+    player_i_data$name2 <- c('PORPAG')
+    player_i_data$name3 <- c('FG%')
+    player_i_data$name4 <- c('Rebounds')
+    player_i_data$name5 <- c('FT%')
+    player_dfs[[paste0('player_',i)]] <- player_i_data
+  }
+}
+
+final_df <- data.frame(player = c(player_dfs$player_1$player, player_dfs$player_1$player, player_dfs$player_1$player, player_dfs$player_1$player, player_dfs$player_1$player, player_dfs$player_2$player, player_dfs$player_2$player, player_dfs$player_2$player, player_dfs$player_2$player, player_dfs$player_2$player, player_dfs$player_3$player, player_dfs$player_3$player, player_dfs$player_3$player, player_dfs$player_3$player, player_dfs$player_3$player, player_dfs$player_4$player, player_dfs$player_4$player, player_dfs$player_4$player, player_dfs$player_4$player, player_dfs$player_4$player, player_dfs$player_5$player, player_dfs$player_5$player, player_dfs$player_5$player, player_dfs$player_5$player, player_dfs$player_5$player),
+                       stat = c(names(player_dfs$player_1)[5], names(player_dfs$player_1)[8], names(player_dfs$player_1)[11], names(player_dfs$player_1)[14], names(player_dfs$player_1)[17], names(player_dfs$player_2)[5], names(player_dfs$player_2)[8], names(player_dfs$player_2)[11], names(player_dfs$player_2)[14], names(player_dfs$player_2)[17], names(player_dfs$player_3)[5], names(player_dfs$player_3)[8], names(player_dfs$player_3)[11], names(player_dfs$player_3)[14], names(player_dfs$player_3)[17], names(player_dfs$player_4)[5], names(player_dfs$player_4)[8], names(player_dfs$player_4)[11], names(player_dfs$player_4)[14], names(player_dfs$player_4)[17], names(player_dfs$player_5)[5], names(player_dfs$player_5)[8], names(player_dfs$player_5)[11], names(player_dfs$player_5)[14], names(player_dfs$player_5)[17]),
+                       raw = c(unlist(player_dfs$player_1[,c(5,8,11,14,17)]), unlist(player_dfs$player_2[,c(5,8,11,14,17)]), unlist(player_dfs$player_3[,c(5,8,11,14,17)]), unlist(player_dfs$player_4[,c(5,8,11,14,17)]), unlist(player_dfs$player_5[,c(5,8,11,14,17)])),
+                       ptile = c(unlist(player_dfs$player_1[,c(6,9,12,15,18)]), unlist(player_dfs$player_2[,c(6,9,12,15,18)]), unlist(player_dfs$player_3[,c(6,9,12,15,18)]), unlist(player_dfs$player_4[,c(6,9,12,15,18)]), unlist(player_dfs$player_5[,c(6,9,12,15,18)])),
+                       conf_ptile = c(unlist(player_dfs$player_1[,c(7,10,13,16,19)]), unlist(player_dfs$player_2[,c(7,10,13,16,19)]), unlist(player_dfs$player_3[,c(7,10,13,16,19)]), unlist(player_dfs$player_4[,c(7,10,13,16,19)]), unlist(player_dfs$player_5[,c(7,10,13,16,19)])),
+                       plot_name = c(unlist(player_dfs$player_1[,c(20,21,22,23,24)]), unlist(player_dfs$player_2[,c(20,21,22,23,24)]), unlist(player_dfs$player_3[,c(20,21,22,23,24)]), unlist(player_dfs$player_4[,c(20,21,22,23,24)]), unlist(player_dfs$player_5[,c(20,21,22,23,24)]))
+                       )
+
+final_df <- final_df %>%
+  mutate(
+    natl_grade = case_when(
+      ptile >= 0.95 ~ "A+",
+        ptile >= 0.90 ~ "A",
+        ptile >= 0.85 ~ "A-",
+        ptile >= 0.80 ~ "B+",
+        ptile >= 0.75 ~ "B",
+        ptile >= 0.70 ~ "B-",
+        ptile >= 0.65 ~ "C+",
+        ptile >= 0.60 ~ "C",
+        ptile >= 0.55 ~ "C-",
+        ptile >= 0.50 ~ "D+",
+        ptile >= 0.45 ~ "D",
+        ptile >= 0.40 ~ "D-",
+        .default = "F"
+    )
+  )
+
+title_text = glue('{Team2} Players Report Card')
+subtitle_text = glue('Players with most minutes per game chosen. Data per Barttorvik through {format(Sys.Date(), "%b %e, %Y")}.')
+title_header <- glue(
+  "<div style='display: flex; justify-content: space-between; align-items: center; background-color: #e2e2e2; padding: 10px; border-radius: 5px;'>
+    <div style='flex-grow: 1; text-align: center; display: flex; align-items: center;'>
+      <div style='margin-right: 10px;'>
+        <img src='{conf_logo}' style='height: 50px; width: auto; vertical-align: middle;'>
+      </div>
+      <div style='flex-grow: 1; text-align: center;'>
+        <span style='font-family: Arial, sans-serif; font-weight: bold; font-size: 28px; line-height: 1.2;'>{title_text}</span><br>
+        <span style='font-family: Arial, serif; font-size: 15px; font-weight: normal; line-height: 1.2;'>{subtitle_text}</span>
+      </div>
+    </div>
+    <div>
+      <img src='{team_stuff$logo}' style='height: 65px; width: auto; vertical-align: middle;'>
+    </div>
+  </div>"
+)
+table2 <- final_df %>%
+  group_by(player) %>%
+  gt() %>%
+  gt_theme_538() %>%
+  cols_hide(c(stat)) %>% 
+  cols_move_to_start(plot_name) %>% 
+  cols_width(ptile ~ px(225), conf_ptile ~ px(225), plot_name ~ px(110)) %>% 
+  cols_align(columns = c(everything(), -plot_name), 'center') %>% 
+  cols_align(columns = c(plot_name), 'left') %>% 
+  gt_bars(ptile, labels = TRUE, fill = team_stuff$color, domain = 0:1, digits = 0) %>% 
+  gt_bars(conf_ptile, labels = TRUE, fill = team_stuff$color, domain = 0:1, digits = 0) %>%
+  fmt_number(columns = raw, rows = everything(), decimals = 1) %>% 
+  gt_add_divider(raw, color = 'black', include_labels = FALSE) %>%
+  gt_add_divider(conf_ptile, color = 'black', include_labels = FALSE) %>%
+  cols_label(plot_name = 'Stat', raw = 'Value', ptile = 'National', conf_ptile = conf_thing, natl_grade = 'Grade') %>%
+  tab_style(locations = cells_row_groups(), style = cell_text(weight = 'bold')) %>%
+  tab_style(locations = cells_row_groups(), style = list(cell_fill(color = 'gray89'),cell_text(font = google_font(font), align = 'center', transform = 'uppercase', size = 20))) %>%
+  tab_spanner(columns = ends_with('ptile'), label = glue('Percentile relative to position group across...')) %>% 
+  tab_options(data_row.padding = 3.5) %>%
+  tab_header(title = html(title_header)) %>%
+  tab_footnote(locations = cells_body(columns = plot_name, row = which(final_df$plot_name == 'Box +/-')),
+               footnote = "Based on box score for evaluating players’ quality and contribution relative to national average") %>%
+  tab_footnote(locations = cells_body(columns = plot_name, row = which(final_df$plot_name == 'PORPAG')),
+               footnote = "PORPAG represents points above replacement player at that usage") %>%
+  tab_footnote(locations = cells_body(columns = plot_name, row = which(final_df$plot_name == 'Rebounds')),
+               footnote = "Total rebounds per game") %>%
+  gtsave(savename20)
+table2
+```
+
+#efficiency plot
+```{r}
+Teams <- c('Massachusetts', Team)
+data <- cbd_torvik_team_factors(year = 2024) %>% filter(team == Team)
+
+conf_team_data <- cbd_torvik_ratings(year = 2024, conf = data$conf)
+Conf <- data$conf
+
+plot <- conf_team_data %>% 
+  ggplot(aes(adj_o, adj_d, team = team)) +
+  geom_cbb_teams(highlight_teams = Teams, width = 0.07, highlight_method = 'both') +
+  geom_mean_lines(aes(x0 = adj_o, y0 = adj_d), color = 'black') +
+  theme_minimal() +
+  theme(plot.title.position = 'plot',
+        plot.title = element_text(face = 'bold', size = 18, hjust = 0.5),
+        plot.subtitle = element_text(face = 'bold', size = 12, hjust = 0.5),
+        plot.background = element_rect(fill = 'gray89'),
+        axis.title = element_text(face = 'bold')) +
+  labs(title = glue('Adjusted Efficiencies'),
+       subtitle = glue('Conference(s): {Conf}'),
+       x = 'Offense',
+       y = 'Defense')
+ggsave(plot = plot, filename = savename21)
+```
+
+#player plots
+```{r}
+data <- cbd_torvik_player_season(year = 2024) %>% filter(team %in% c('Massachusetts', NCAA_team)) %>% filter(min > 20) %>%
+  mutate(
+    pos_group = case_when(pos %in% c('Combo G', 'Pure PG', 'Scoring PG', 'Wing G') ~ 'Guard',
+                          pos %in% c('Wing F', 'Stretch 4', 'C', 'PF/C') ~ 'Big')
+  )
+
+Guard <- data %>% filter(pos_group == 'Guard')
+Big <- data %>% filter(pos_group == 'Big')
+
+player_ids1 <- get_espn_players('UMass') %>% rename(player = displayName)
+player_ids2 <- get_espn_players(NCAA_team) %>% rename(player = displayName)
+player_ids <- rbind(player_ids1, player_ids2)
+Guard <- Guard %>%
+  left_join(player_ids, by = 'player') %>%
+  separate(player, into = c('first_name', 'last_name'), sep = ' ')
+xmin <- min(Guard$adj_oe) - 2.5
+xmax <- max(Guard$adj_oe) + 2.5
+ymin <- min(Guard$adj_de) - 2.5
+ymax <- max(Guard$adj_de) + 2.5
+
+guard_plot1 <- Guard %>%
+  ggplot(aes(adj_oe, adj_de)) +
+  geom_mean_lines(aes(x0 = adj_oe, y0 = adj_de), color = 'black') +
+  geom_cbb_headshots(aes(player_id = id.y, width = 0.1)) +
+  geom_text(aes(label = last_name), vjust = 4, hjust = 0.5, size = 3.5, fontface = 'bold') +
+  theme_minimal() +
+  labs(title = glue('Adjusted Efficiencies | Guards'),
+       subtitle = glue('Team(s): UMass vs. {NCAA_team}'),
+       x = 'Offense',
+       y = 'Defense') +
+  theme(
+    plot.title = element_text(face = 'bold', size = 18, hjust = 0.5),
+    plot.subtitle = element_text(face = 'bold', size = 12, hjust = 0.5),
+    plot.background = element_rect(fill = 'gray89'),
+    axis.title = element_text(face = 'bold'),
+    panel.grid.major = element_line(size = 1, color = 'white'),
+    panel.grid.minor = element_line(size = 0.5, color = 'white')
+  ) +
+  lims(x = c(xmin, xmax), y = c(ymin, ymax))
+guard_plot1
+
+xmin <- min(Guard$ast_to) - 0.125
+xmax <- max(Guard$ast_to) + 0.125
+ymin <- min(Guard$efg) - 2.5
+ymax <- max(Guard$efg) + 2.5
+
+guard_plot2 <- Guard %>%
+  ggplot(aes(ast_to, efg)) +
+  geom_mean_lines(aes(x0 = ast_to, y0 = efg), color = 'black') +
+  geom_cbb_headshots(aes(player_id = id.y, width = 0.1)) +
+  geom_text(aes(label = last_name), vjust = 4, hjust = 0.5, size = 3.5, fontface = 'bold') +
+  theme_minimal() +
+  labs(title = glue('Ast/Tov vs. eFG% | Guards'),
+       subtitle = glue('Team(s): UMass vs. {NCAA_team}'),
+       x = 'Ast/Tov',
+       y = 'eFG%') +
+  theme(
+    plot.title = element_text(face = 'bold', size = 18, hjust = 0.5),
+    plot.subtitle = element_text(face = 'bold', size = 12, hjust = 0.5),
+    plot.background = element_rect(fill = 'gray89'),
+    axis.title = element_text(face = 'bold'),
+    panel.grid.major = element_line(size = 1, color = 'white'),
+    panel.grid.minor = element_line(size = 0.5, color = 'white')
+  ) +
+  lims(x = c(xmin, xmax), y = c(ymin, ymax))
+guard_plot2
+
+xmin <- min(Guard$ppg) - 1
+xmax <- max(Guard$ppg) + 1
+ymin <- min(Guard$usg) - 1.25
+ymax <- max(Guard$usg) + 1.25
+
+guard_plot3 <- Guard %>%
+  ggplot(aes(ppg, usg)) +
+  geom_mean_lines(aes(x0 = ppg, y0 = usg), color = 'black') +
+  geom_cbb_headshots(aes(player_id = id.y, width = 0.1)) +
+  geom_text(aes(label = last_name), vjust = 4, hjust = 0.5, size = 3.5, fontface = 'bold') +
+  theme_minimal() +
+  labs(title = glue('Points vs. USG% | Guards'),
+       subtitle = glue('Team(s): UMass vs. {NCAA_team}'),
+       x = 'Points',
+       y = 'USG%') +
+  theme(
+    plot.title = element_text(face = 'bold', size = 18, hjust = 0.5),
+    plot.subtitle = element_text(face = 'bold', size = 12, hjust = 0.5),
+    plot.background = element_rect(fill = 'gray89'),
+    axis.title = element_text(face = 'bold'),
+    panel.grid.major = element_line(size = 1, color = 'white'),
+    panel.grid.minor = element_line(size = 0.5, color = 'white')
+  ) +
+  lims(x = c(xmin, xmax), y = c(ymin, ymax))
+guard_plot3
+
+player_ids1 <- get_espn_players('UMass') %>% rename(player = displayName)
+player_ids2 <- get_espn_players(NCAA_team) %>% rename(player = displayName)
+player_ids <- rbind(player_ids1, player_ids2)
+Big <- Big %>%
+  left_join(player_ids, by = 'player') %>%
+  separate(player, into = c('first_name', 'last_name'), sep = ' ')
+
+xmin <- min(Big$adj_oe) - 2.5
+xmax <- max(Big$adj_oe) + 2.5
+ymin <- min(Big$adj_de) - 2.5
+ymax <- max(Big$adj_de) + 2.5
+
+big_plot1 <- Big %>%
+  ggplot(aes(adj_oe, adj_de)) +
+  geom_mean_lines(aes(x0 = adj_oe, y0 = adj_de), color = 'black') +
+  geom_cbb_headshots(aes(player_id = id.y, width = 0.1)) +
+  geom_text(aes(label = last_name), vjust = 4, hjust = 0.5, size = 3.5, fontface = 'bold') +
+  theme_minimal() +
+  labs(title = glue('Adjusted Efficiencies | Bigs'),
+       subtitle = glue('Team(s): UMass vs. {NCAA_team}'),
+       x = 'Offense',
+       y = 'Defense') +
+  theme(
+    plot.title = element_text(face = 'bold', size = 18, hjust = 0.5),
+    plot.subtitle = element_text(face = 'bold', size = 12, hjust = 0.5),
+    plot.background = element_rect(fill = 'gray89'),
+    axis.title = element_text(face = 'bold'),
+    panel.grid.major = element_line(size = 1, color = 'white'),
+    panel.grid.minor = element_line(size = 0.5, color = 'white')
+  ) +
+  lims(x = c(xmin, xmax), y = c(ymin, ymax))
+big_plot1
+
+Big <- Big %>%
+  mutate(
+    fg_pct = (fg_pct * 100),
+    ft_rate = ((fta/fga) * 100)
+  )
+xmin <- min(Big$ft_rate) - 2.5
+xmax <- max(Big$ft_rate) + 2.5
+ymin <- min(Big$fg_pct) - 1.5
+ymax <- max(Big$fg_pct) + 1.5
+
+big_plot2 <- Big %>%
+  ggplot(aes(ft_rate, fg_pct)) +
+  geom_mean_lines(aes(x0 = ft_rate, y0 = fg_pct), color = 'black') +
+  geom_cbb_headshots(aes(player_id = id.y, width = 0.1)) +
+  geom_text(aes(label = last_name), vjust = 4, hjust = 0.5, size = 3.5, fontface = 'bold') +
+  theme_minimal() +
+  labs(title = glue('FTr vs. FG% | Bigs'),
+       subtitle = glue('Team(s): UMass vs. {NCAA_team}'),
+       x = 'FT Att. Rate',
+       y = 'FG%') +
+  theme(
+    plot.title = element_text(face = 'bold', size = 18, hjust = 0.5),
+    plot.subtitle = element_text(face = 'bold', size = 12, hjust = 0.5),
+    plot.background = element_rect(fill = 'gray89'),
+    axis.title = element_text(face = 'bold'),
+    panel.grid.major = element_line(size = 1, color = 'white'),
+    panel.grid.minor = element_line(size = 0.5, color = 'white')
+  ) +
+  lims(x = c(xmin, xmax), y = c(ymin, ymax))
+big_plot2
+
+xmin <- min(Big$oreb_rate) - 1
+xmax <- max(Big$oreb_rate) + 1
+ymin <- min(Big$dreb_rate) - 1
+ymax <- max(Big$dreb_rate) + 1
+
+big_plot3 <- Big %>%
+  ggplot(aes(oreb_rate, dreb_rate)) +
+  geom_mean_lines(aes(x0 = oreb_rate, y0 = dreb_rate), color = 'black') +
+  geom_cbb_headshots(aes(player_id = id.y, width = 0.1)) +
+  geom_text(aes(label = last_name), vjust = 4, hjust = 0.5, size = 3.5, fontface = 'bold') +
+  theme_minimal() +
+  labs(title = glue('ORB% vs. DRB% | Bigs'),
+       subtitle = glue('Team(s): UMass vs. {NCAA_team}'),
+       x = 'ORB%',
+       y = 'DRB%') +
+  theme(
+    plot.title = element_text(face = 'bold', size = 18, hjust = 0.5),
+    plot.subtitle = element_text(face = 'bold', size = 12, hjust = 0.5),
+    plot.background = element_rect(fill = 'gray89'),
+    axis.title = element_text(face = 'bold'),
+    panel.grid.major = element_line(size = 1, color = 'white'),
+    panel.grid.minor = element_line(size = 0.5, color = 'white')
+  ) +
+  lims(x = c(xmin, xmax), y = c(ymin, ymax))
+big_plot3
+
+ggsave(plot = guard_plot1, filename = savename22)
+ggsave(plot = guard_plot2, filename = savename23)
+ggsave(plot = guard_plot3, filename = savename24)
+ggsave(plot = big_plot1, filename = savename25)
+ggsave(plot = big_plot2, filename = savename26)
+ggsave(plot = big_plot3, filename = savename27)
+```
+
+#conf
+```{r}
+A10_vik <- vik_data %>%
+  filter(conf == 'A10')
+A10_vik <- A10_vik[,-c(2:6,30,31)]
+A10_ranked <- as.data.frame(matrix(NA, nrow = nrow(A10_vik), ncol = ncol(A10_vik)))
+for (col in colnames(A10_vik)[-1]) {
+  A10_ranked[[col]] <- rank(-A10_vik[[col]])  # Use rank(-column) for descending order
+}
+A10_ranked$team <- A10_vik$team
+A10_ranked <- A10_ranked[,-(1:24)]
+A10_ranked$adj_d <- abs(A10_ranked$adj_d - 16)
+A10_ranked$def_efg <- abs(A10_ranked$def_efg - 16)
+A10_ranked$def_ftr <- abs(A10_ranked$def_ftr - 16)
+A10_ranked$tov_rate <- abs(A10_ranked$tov_rate - 16)
+A10_ranked$def_two_pt_pct <- abs(A10_ranked$def_two_pt_pct - 16)
+A10_ranked$def_three_pt_pct <- abs(A10_ranked$def_three_pt_pct - 16)
+A10_ranked$def_ft_pct <- abs(A10_ranked$def_ft_pct - 16)
+A10_ranked$def_three_fg_rate <- abs(A10_ranked$def_three_fg_rate - 16)
+A10_ranked$block_rate_allowed <- abs(A10_ranked$block_rate_allowed - 16)
+A10_ranked$def_assist_rate <- abs(A10_ranked$def_assist_rate - 16)
+
+A10_ranked1 <- round(A10_ranked[-24],0)
+A10_ranked1$team <- A10_ranked$team
+A10_ranked <- A10_ranked1
+
+team_row <- A10_ranked[A10_ranked$team == 'Dayton',]
+good_at <- colnames(team_row)[team_row[1, ] %in% 1:3]
+bad_at <- colnames(team_row)[team_row[1, ] %in% c(13:15)]
+good_at
+bad_at
+```
+

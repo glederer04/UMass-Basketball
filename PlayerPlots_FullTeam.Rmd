@@ -1,0 +1,68 @@
+---
+title: "PlayerPlots_FullTeam"
+author: "Greg"
+date: "2024-01-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
+```
+
+#packages
+```{r}
+library(cbbplotR)
+library(cbbdata)
+cbbdata::cbd_login(username = 'glederer', password = 'Bryce.0819')
+library(tidyverse)
+library(dplyr)
+library(glue)
+library(tidyr)
+```
+
+#inputs
+```{r}
+NCAA_Team <- 'Massachusetts' #dict$NCAA
+ESPN_Team <- 'UMass' #dict#ESPN
+
+savename <- paste0(NCAA_Team, ' | Player Plot.png')
+```
+
+#data
+```{r}
+data <- cbd_torvik_player_season(year = 2024) %>% filter(team == Team) %>% filter(min>30)
+
+player_ids <- get_espn_players(ESPN_Team) %>% rename(player = displayName)
+data <- data %>%
+  left_join(player_ids, by = 'player') %>%
+  separate(player, into = c('first_name', 'last_name'), sep = ' ')
+
+xmin <- min(data$adj_oe) - 2.5
+xmax <- max(data$adj_oe) + 2.5
+ymin <- min(data$adj_de) - 2.5
+ymax <- max(data$adj_de) + 2.5
+
+plot1 <- data %>%
+  ggplot(aes(adj_oe, adj_de)) +
+  geom_mean_lines(aes(x0 = adj_oe, y0 = adj_de), color = 'black') +
+  geom_cbb_headshots(aes(player_id = id.y, width = 0.1)) +
+  geom_text(aes(label = last_name), vjust = 4, hjust = 0.5, size = 3.5, fontface = 'bold') +
+  theme_minimal() +
+  labs(title = glue('Adjusted Efficiencies | {NCAA_Team}'),
+       subtitle = glue('Team(s): {NCAA_Team}'),
+       x = 'Offense',
+       y = 'Defense') +
+  theme(
+    plot.title = element_text(face = 'bold', size = 18, hjust = 0.5),
+    plot.subtitle = element_text(face = 'bold', size = 12, hjust = 0.5),
+    plot.background = element_rect(fill = 'gray89'),
+    axis.title = element_text(face = 'bold'),
+    panel.grid.major = element_line(size = 1, color = 'white'),
+    panel.grid.minor = element_line(size = 0.5, color = 'white')
+  ) +
+  lims(x = c(xmin, xmax), y = c(ymin, ymax))
+plot1
+ggsave(plot = plot1, filename = savename)
+```
+

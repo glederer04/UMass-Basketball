@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
 ```
 
 #packages
@@ -20,7 +21,6 @@ library(ggpubr)
 library(dplyr)
 library(rvest)
 library(gtExtras)
-knitr::opts_knit$set(root.dir = '/Users/gregorylederer/Desktop/UMass Basketball')
 ```
 
 #input
@@ -265,7 +265,7 @@ H_stats <- H_stats %>%
          trans_rtg = round(TransOrtg,1),
          
          url = c('https://cdn-icons-png.flaticon.com/512/25/25694.png', 'https://cdn-icons-png.flaticon.com/512/25/25694.png'),
-         team = c('Home', 'Home'))
+         team = c('Offense at Home', 'Defense at Home'))
 ```
 
 #A stat loop
@@ -339,7 +339,7 @@ A_stats <- A_stats %>%
          trans_rtg = round(TransOrtg,1),
          
          url = c('https://toppng.com/uploads/preview/curvy-road-png-image-royalty-free-download-transparent-cartoon-windy-road-115628673545e5d4iymcx.png', 'https://toppng.com/uploads/preview/curvy-road-png-image-royalty-free-download-transparent-cartoon-windy-road-115628673545e5d4iymcx.png'),
-         team = c('Away', 'Away'))
+         team = c('Offense when Away', 'Defense when Away'))
 ```
 
 #N stat loop
@@ -411,7 +411,7 @@ N_stats <- N_stats %>%
          trans_rtg = round(TransOrtg,1),
          
          url = c('https://w7.pngwing.com/pngs/145/882/png-transparent-man-avatar-shrug-emoji-emoticon-iphone-emoji-hand-bunny-sticker.png', 'https://w7.pngwing.com/pngs/145/882/png-transparent-man-avatar-shrug-emoji-emoticon-iphone-emoji-hand-bunny-sticker.png'),
-         team = c('Neutral', 'Neutral'))
+         team = c('Offense at Neutral site', 'Defense at Neutral site'))
 ```
 
 #offense data
