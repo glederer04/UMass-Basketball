@@ -1,0 +1,468 @@
+---
+title: "OnePageScout"
+author: "Greg"
+date: "2024-01-18"
+output: html_document
+---
+
+**TEAM INPUT**
+```{r}
+Team <- 'North Carolina' #dict$NCAA
+Team2 <- 'UNC' #dict$ESPN
+color1 <- '#7BAFD4'
+color2 <- '#13294B'
+color3 <- '#000000'
+
+savename1 <- paste0(Team, ' | Player Stats.png')
+savename2 <- paste0(Team, ' | Wheel.png')
+savename3 <- paste0(Team, ' | Game Plot.png')
+savename4 <- paste0(Team, ' | Heatmap.png')
+savename5 <- paste0(Team, ' | Pace Circle.png')
+savename6 <- paste0(Team, ' | Rank Progress.png')
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/gregorylederer/Desktop/UMass Basketball")
+```
+
+#packages
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ncaahoopR)
+library(bigballR)
+library(cbbdata)
+cbbdata::cbd_login(username = 'glederer', password = 'Bryce.0819')
+library(gt)
+library(gtExtras)
+library(hoopR)
+library(glue)
+library(here)
+library(magick)
+library(tidyr)
+library(geomtextpath)
+library(ggplot2)
+library(devtools)
+library(data.table)
+library(cowplot)
+library(gridExtra)
+library(scales)
+library(shades)
+```
+
+#player data table
+```{r}
+data <- cbd_torvik_player_season(year = '2024') %>% filter(team == Team) %>% filter(mpg > 8)
+players <- data$player
+
+data <- data %>%
+  mutate(
+    player = paste0(player, '--', pos, ' | ', hgt, ' | ', exp),
+    ortg = round(ortg,1),
+    drtg = round(drtg,1),
+    mpg = round(mpg,1),
+    ppg = round(ppg,1),
+    rpg = round(rpg,1),
+    apg = round(apg,1),
+    tov = round(tov,1),
+    spg = round(spg,1),
+    bpg = round(bpg,1),
+    FG = paste0(fgm, '-', fga),
+    'FG%' = round(fg_pct*100,1),
+    FT = paste0(ftm, '-', fta),
+    'FT%' = round(ft_pct*100,1),
+    '3FG' = paste0(three_m, '-', three_a),
+    '3FG%' = round(three_pct*100,1)
+  ) %>%
+  select(player, ortg, drtg, mpg, ppg, rpg, apg, tov, spg, bpg, FG, 'FG%', FT, 'FT%', '3FG', '3FG%')
+
+data <- data %>% arrange(desc(mpg))
+
+tbl1 <- data %>%
+  mutate(
+    player = str_replace_all(player, '--', '<br>')
+  ) %>%
+  gt() %>%
+  tab_spanner(label = md('**ADV.**'), columns = c(ortg,drtg)) %>%
+  tab_spanner(label = md('**BOX**'), columns = c(mpg, ppg, rpg, apg, tov, spg, bpg)) %>%
+  tab_spanner(label = md('**SHOOTING**'), columns = c(FG, 'FG%', FT, 'FT%', '3FG', '3FG%')) %>%
+  cols_label(player = md('**Player**'), ortg = 'ORTG', drtg = 'DRTG', mpg = 'MPG', ppg = 'PPG', rpg = 'RPG', apg = 'APG', tov = 'TOV', spg = 'SPG', bpg = 'BPG', FG = 'FG', 'FG%' = 'FG%', FT = 'FT', 'FT%' = 'FT%', '3FG' = '3FG', '3FG%' = '3FG%') %>%
+  data_color(columns = c(ortg, ppg, 'FG%', 'FT%', '3FG%'), colors = c('white', color1)) %>%
+  data_color(columns = c(drtg), colors = c(color1, 'white')) %>%
+  # gt_add_divider(player) %>%
+  # gt_add_divider(drtg) %>%
+  # gt_add_divider(bpg) %>%
+  #tab_options(table.width = px(1050)) %>%
+  cols_width(player ~ px(200), FG ~ px(80), FT ~ px(80), '3FG' ~ px(80), ortg ~ px(60), drtg ~ px(60), mpg ~ px(50), ppg ~ px(50), apg ~ px(50), rpg ~ px(50), tov ~ px(45), spg ~ px(45), bpg ~ px(45)) %>%
+  cols_align(align = c('center'), columns = c(ortg, drtg, mpg, ppg, rpg, apg, tov, spg, bpg, FG, 'FG%', FT, 'FT%', '3FG', '3FG%')) %>%
+  fmt_markdown(columns = TRUE) %>%
+  #tab_style(style = list(cell_text(weight = 'bold')), locations = cells_body(column = player)) %>%
+  tab_options(column_labels.border.bottom.width = px(3), column_labels.border.bottom.color = 'black') %>%
+  gtsave(savename1)
+tbl1
+```
+
+#wheel
+efficiency: overall, offense, defense
+shooting: efg, ftr, 3pt_att, 3pt%
+other: oreb_rate, dreb_rate, tov_rate
+```{r}
+hm <- c('ACC', 'BE', 'B10', 'B12', 'P12', 'SEC')
+mm <- c('MWC', 'A10', 'Amer', 'MVC', 'WCC', 'Ivy', 'CUSA', 'SC')
+wheel <- cbd_torvik_team_factors(year = 2024)
+
+wheel <- wheel %>%
+  mutate(
+    conf_group = case_when(conf %in% hm ~ 'High-Majors', conf %in% mm ~ 'Mid-Majors', .default = 'Low-Majors')
+  ) %>%
+  select(all_of(c('team', 'conf_group', 'barthag', 'adj_o', 'adj_d', 'efg', 'ftr', 'three_fg_rate', 'three_pt_pct', 'oreb_rate', 'dreb_rate', 'tov_rate'))) %>%
+  mutate(across(-c(team), percent_rank, .names = '{.col}_ptile'), .by = c(conf_group)) %>%
+  mutate(across(all_of(c('adj_d_ptile', 'tov_rate_ptile')), ~1-.x))
+
+wheel_team <- wheel %>% filter(team == Team) %>%
+  mutate(
+    Overall = round(barthag_ptile*100,1),
+    Offense = round(adj_o_ptile*100,1),
+    Defense = round(adj_d_ptile*100,1),
+    'eFG%' = round(efg_ptile*100,1),
+    'FT Att. Rate' = round(ftr_ptile*100,1),
+    '3pt Att. Rate' = round(three_fg_rate_ptile*100,1),
+    '3pt%' = round(three_pt_pct_ptile*100,1),
+    'ORB Rate' = round(oreb_rate_ptile*100,1),
+    'DRB Rate' = round(dreb_rate_ptile*100,1),
+    'Tov Rate' = round(tov_rate_ptile*100,1)
+  )
+
+wheel_df <- data.frame(
+  index = 1:10,
+  stat = c('Overall', 'Offense', 'Defense', 'eFG%', 'FT Att. Rate', '3pt Att. Rate', '3pt%', 'ORB Rate', 'DRB Rate', 'Tov Rate'),
+  value = c(wheel_team$Overall, wheel_team$Offense, wheel_team$Defense, wheel_team$`eFG%`, wheel_team$`FT Att. Rate`, wheel_team$`3pt Att. Rate`, wheel_team$`3pt%`, wheel_team$`ORB Rate`, wheel_team$`DRB Rate`, wheel_team$`Tov Rate`)
+)
+
+wheel_df <- wheel_df %>%
+  mutate(type = case_when(
+    index %in% 1:3 ~ "Efficiency",
+    index %in% 4:7 ~ "Shooting",
+    index %in% 8:10 ~ "Other"
+  ))
+
+wheel_df$index <- as.numeric(wheel_df$index)
+wheel_df$value <- as.numeric(wheel_df$value)
+
+wheel_df$type <- factor(wheel_df$type, levels = c('Efficiency', 'Shooting', 'Other'))
+
+wheel_plot <- ggplot(data = wheel_df, aes(x = reorder(stat, index), y = value, label = value, fill = type)) +
+  geom_bar(data = wheel_df, width = 1, color = 'white', stat = 'identity') +
+  coord_curvedpolar() +
+  geom_bar(aes(y=100, fill=type), stat='identity', width=1, alpha=0.5) +
+  geom_hline(yintercept = seq(0,100,by = 100),color = 'white', size=1) +
+  geom_vline(xintercept = seq(.5,10,by=1),color = 'white',size=0.5) +
+  geom_label(color = 'black', fill = 'white', size=5, fontface='bold', family='Impact', show.legend = FALSE) +
+  scale_fill_manual(values = c(color1,color2,color3)) +
+  theme(legend.position = "left",
+        legend.direction = "vertical",
+        legend.background = element_rect(fill = "white", color="white"),
+        legend.title = element_blank(),
+        legend.text = element_text(colour = "black", family = "Impact", face = "bold", size = 15),
+        legend.key.size = unit(.5, "cm"),
+        legend.box.spacing = unit(0, "mm"),
+        plot.title = element_text(hjust = .5, colour = "black", face = "bold", size = 16, family = "Impact"),
+        plot.subtitle = element_text(hjust = .5, colour = "black", size = 8, family = "Impact"),
+        plot.background = element_rect(fill = "white", color="white"),
+        panel.background = element_rect(fill = "white", color="white"),
+        panel.grid = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_text(face = "bold", size = 20, colour = "black"),
+        axis.title = element_blank(),
+        axis.text.x = element_text(face = "bold", size = 20, family = "Impact", vjust = 0.45))
+wheel_plot
+ggsave(plot = wheel_plot, filename = savename2)
+```
+
+#usage players
+```{r}
+data <- cbd_torvik_player_season(year = '2024') %>% filter(team == Team) %>% filter(mpg > 8)
+data_usg_players <- data %>% arrange(desc(usg)) %>% slice(1:3)
+usg_players <- data_usg_players$player
+
+all_players <- cbd_torvik_player_season(year = '2024')
+
+reverse_cols <- c('tov_', 'dporpag_', 'drtg_', 'adj_de_')
+
+all_players <- all_players %>%
+  mutate(
+    pos_group = case_when(pos %in% c('Combo G', 'Pure PG', 'Scoring PG', 'Wing G') ~ 'guards',
+                          pos %in% c('C', 'PF/C', 'Wing F', 'Stretch 4') ~ 'bigs'),
+    conf_group = case_when(conf %in% hm ~ 'High-Majors', conf %in% mm ~ 'Mid-Majors', .default = 'Low-Majors')
+  ) %>%
+  select(player, exp, pos_group, conf_group, 10:23, ft_pct, two_pct, three_pct, rim_pct, 44:55, fg_pct) %>%
+  mutate(across(-c(player,exp), percent_rank, .names = '{.col}_conf_pos_ptile'), .by = c(conf_group, pos_group)) %>%
+  mutate(across(-c(player,ends_with('_ptile')), percent_rank, .names = '{.col}_conf_pos_year_ptile'), .by = c(conf_group, pos_group,exp)) %>%
+  mutate(across(all_of(starts_with(reverse_cols)), ~1-.x))
+
+fresh <- c()
+non_fresh <- c()
+for (player in usg_players) {
+  for (i in 1:nrow(data_usg_players)) {
+    if (player == data_usg_players$player[i]) {
+      if (data_usg_players$exp[i] == 'Fr') {
+        fresh <- c(fresh, data_usg_players$player[i])
+        print('fresh')
+      } else {
+        non_fresh <- c(non_fresh, data_usg_players$player[i])
+        print('no fresh')
+      }
+    }
+  }
+}
+
+fresh_df_list <- c()
+for (player_name in fresh) {
+  current_test <- all_players[all_players$player == player_name, ]
+  fresh_df_list[[player_name]] <- current_test
+}
+if (length(fresh_df_list) > 0) {
+  list2env(fresh_df_list, envir = .GlobalEnv)
+}
+
+non_fresh_df_list <- c()
+for (player_name in non_fresh) {
+  current_test <- all_players[all_players$player == player_name, ]
+  current_test <- current_test %>%
+    select(-c(ends_with('year_ptile')))
+  non_fresh_df_list[[player_name]] <- current_test
+}
+list2env(non_fresh_df_list, envir = .GlobalEnv)
+
+usg_data_list <- c(fresh_df_list, non_fresh_df_list)
+
+for (player_name in names(usg_data_list)) {
+  current_dt <- as.data.table(usg_data_list[[player_name]])
+  ptile_columns <- grep("_ptile$", names(current_dt), value = TRUE)
+  max_values <- sapply(ptile_columns, function(col) max(current_dt[[col]]))
+  max_ptile_columns <- ptile_columns[max_values == max(max_values)]
+  cat("Player:", player_name, "\n")
+  cat("Columns with highest values:", paste(max_ptile_columns, collapse = ", "), "\n\n")
+}
+
+usg_data_list <- lapply(usg_data_list, function(df) {
+  df %>% select(ends_with("_ptile"))
+})
+
+for (player_name in names(usg_data_list)) {
+  current_dt <- as.data.table(usg_data_list[[player_name]])
+  ptile_columns <- grep("_ptile$", names(current_dt), value = TRUE)
+  top_5_columns <- names(current_dt)[order(-apply(current_dt[, ..ptile_columns], 2, max))[1:5]]
+  bottom_5_columns <- names(current_dt)[order(apply(current_dt[, ..ptile_columns], 2, min))[1:5]]
+  cat("Player:", player_name, "\n")
+  cat("Top 5 columns with highest values:", paste(top_5_columns, collapse = ", "), "\n")
+  cat("Bottom 5 columns with lowest values:", paste(bottom_5_columns, collapse = ", "), "\n\n")
+}
+```
+
+#game data
+x-axis: date
+y-axis: avg margin (add faded line and thing if possible)
+color dot home/away/neutral
+size dot #fta
+```{r}
+game_data <- cbd_torvik_game_stats(year = '2024', team = Team) %>%
+  mutate(game_num = row_number()) %>%
+  mutate(
+    Location = case_when(
+      location == 'H' ~ 'Home',
+      location == 'A' ~ 'Away',
+      location == 'N' ~ 'Neutral'
+    )
+  ) %>%
+  rename(FTA = fta)
+
+game_data_plot <- ggplot(game_data, aes(x = tempo, y = avg_marg, size = FTA, color = Location)) +
+  geom_point(aes(fill = Location), shape = 21) +
+  scale_size_continuous(range = c(3, 12)) +
+  labs(
+    x = "Tempo",
+    y = "Average Margin"
+  ) +
+  theme_minimal() +
+  geom_smooth(method = "lm", se = TRUE, color = "black", fill = "gray70", alpha = 0.2) +
+  scale_color_manual(values = c('black', 'black', 'black')) +
+  scale_fill_manual(values = c(color1, color2, color3)) +
+  guides(fill = guide_legend(title = "Location", override.aes = list(size = 8)),
+         size = FALSE) +
+  theme(
+    legend.title = element_text(face = "bold", size = 18), 
+    axis.title = element_text(face = "bold", size = 20, family = 'Impact'),
+    legend.text = element_text(face = 'bold', family = 'Impact', size = 16),
+    axis.text = element_text(size = 15, family = 'Impact')
+  ) +
+  annotate("text", x = Inf, y = Inf, hjust = 1.45, vjust = 1, label = "Bigger cirlce = More FTA", size = 5, face = 'bold')
+game_data_plot
+ggsave(plot = game_data_plot, filename = savename3, height = 9, width = 9)
+```
+
+#shot charts
+```{r}
+schedule <- get_schedule(Team2, season = '2023-24')
+team_shots <- get_shot_locs(game_ids = schedule$game_id) %>% mutate(x = x - 25, y = 94 - y)
+team_shots <- team_shots %>%
+  filter(!endsWith(shot_text, 'Free Throw.')) %>%
+  filter(team_name == Team)
+team_shots$x <- as.numeric(team_shots$x)
+team_shots$y <- as.numeric(team_shots$y)
+
+team_shots <- team_shots %>%
+  mutate(x = ifelse(x > -25, -25 - (x + 25), x))
+
+heatmap_plot <- ggplot(data = team_shots, aes(x = x, y = y)) +
+  stat_bin_hex(aes(fill = ..count..), bins = 30) +
+  scale_fill_gradientn(colors = c(saturation(color1,.1), color1), guide = "colorbar") +
+  theme_void() +
+  coord_fixed(ratio = 1) +
+  theme(
+    plot.margin = margin(t = 0, r = 0, b = 0, l = 0),
+    panel.background = element_rect(fill = "transparent", color = NA),
+    legend.position = 'none'
+  ) +
+  theme(axis.text = element_blank())
+
+heatmap_plot
+ggsave(plot = heatmap_plot, filename = savename4)
+```
+
+#play length
+```{r}
+tempo_data <- get_pbp(team = Team2)
+
+tempo_data <- tempo_data %>%
+  filter(possession_before == Team) %>%
+  filter(!endsWith(description, 'Timeout')) %>%
+  filter(!endsWith(description, 'Rebound.')) %>%
+  filter(!endsWith(description, 'Free Throw.')) %>%
+  filter(!endsWith(description, 'Turnover.')) %>%
+  filter(!foul) %>%
+  filter(play_length<31) %>%
+  filter(play_length>3)
+  
+
+# true scoring / (false scoring - foul)
+# group by play length
+
+tempo_df <- tempo_data %>%
+  group_by(play_length) %>%
+  summarise(
+    play_length = first(play_length),
+    count = n(),
+    score = sum(scoring_play == TRUE)
+  ) %>%
+  ungroup()
+
+tempo_df <- tempo_df %>%
+  mutate(
+    efficiency = ((score) / count) * 100
+  )
+
+circular_bar_chart <- ggplot(tempo_df, aes(x = as.factor(play_length), y = count, fill = efficiency)) +
+  geom_bar(stat = "identity", color = "white") +
+  scale_fill_gradient(low = 'gray', high = color1) +
+  ylim(-100, 120) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-2, 4), "cm")
+  ) +
+  coord_polar(start = 0)
+circular_bar_chart
+ggsave(plot = circular_bar_chart, filename = savename5, width = 3.16, height = 3.33)
+
+print(paste0('Average Possession Length: ', mean(tempo_data$play_length)))
+```
+
+#team advantages
+```{r}
+progression <- cbd_torvik_ratings_archive(team = Team, year = 2024)
+
+progression <- progression %>%
+  mutate(count = row_number())
+
+min_rank <- progression %>% select(rank, adj_o_rk, adj_d_rk) %>% summarise_all(min)
+min_rank <- pmin(min_rank$rank, min_rank$adj_o_rk, min_rank$adj_d_rk)
+max_rank <- progression %>% select(rank, adj_o_rk, adj_d_rk) %>% summarise_all(max)
+max_rank <- pmax(max_rank$rank, max_rank$adj_o_rk, max_rank$adj_d_rk)
+mid_rank <- round((max_rank+min_rank)/2,0)
+
+progress_plt <- ggplot(progression, aes(x = count)) +
+  geom_line(aes(y = rank, color = "Overall Rank"), size = 1) +
+  geom_line(aes(y = adj_o_rk, color = "Offensive Rank"), size = 1) +
+  geom_line(aes(y = adj_d_rk, color = "Defensive Rank"), size = 1) +
+  labs(title = "",
+       x = NULL, 
+       y = 'Rank') +
+  scale_y_reverse(expand = c(0.2, 0.2), breaks = c(min_rank, mid_rank, max_rank), labels = c(min_rank, mid_rank, max_rank)) + 
+  scale_color_manual(values = c(color3,color2,color1)) +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.title = element_blank(),
+        axis.title.y = element_text(angle = 0, vjust = 1, face = "bold", family = "Impact", size = 24),
+        axis.ticks.y = element_line(size = 8),
+        panel.grid.major.y = element_line(size = 1, color = 'gray70'),
+        text = element_text(face = "bold", family = "Impact", size = 20))
+progress_plt
+ggsave(plot = progress_plt, filename = savename6, width = 8.5, height = 6)
+```
+
+#team plots
+```{r}
+
+```
+
+#print data
+```{r}
+schedule <- get_team_schedule(team.name = Team, season = '2023-24')
+att_data <- get_team_stats(play_by_play_data = get_play_by_play(game_ids = schedule$Game_ID))
+att_data <- att_data %>%
+  filter(Team == 'North Carolina')
+rim_att <- as.numeric(round((sum(att_data$RIMA)/sum(att_data$FGA))*100,1))
+mid_att <- as.numeric(round(((sum(att_data$FGA)-sum(att_data$RIMA)-sum(att_data$TPA))/sum(att_data$FGA))*100,1))
+three_att <- as.numeric(round((sum(att_data$TPA)/sum(att_data$FGA))*100,1))
+```
+
+#final print stuff
+```{r}
+usg_players
+for (player in usg_players) {
+  for (i in 1:nrow(data_usg_players)) {
+    if (player == data_usg_players$player[i]) {
+      if (data_usg_players$exp[i] == 'Fr') {
+        fresh <- c(fresh, data_usg_players$player[i])
+        print('fresh')
+      } else {
+        non_fresh <- c(non_fresh, data_usg_players$player[i])
+        print('no fresh')
+      }
+    }
+  }
+}
+for (player_name in names(usg_data_list)) {
+  current_dt <- as.data.table(usg_data_list[[player_name]])
+  ptile_columns <- grep("_ptile$", names(current_dt), value = TRUE)
+  top_5_columns <- names(current_dt)[order(-apply(current_dt[, ..ptile_columns], 2, max))[1:5]]
+  bottom_5_columns <- names(current_dt)[order(apply(current_dt[, ..ptile_columns], 2, min))[1:5]]
+  cat("Player:", player_name, "\n")
+  cat("Top 5 columns with highest values:", paste(top_5_columns, collapse = ", "), "\n")
+  cat("Bottom 5 columns with lowest values:", paste(bottom_5_columns, collapse = ", "), "\n\n")
+}
+
+print(paste0('Average Possession Length: ', mean(tempo_data$play_length)))
+
+cat('Rim Att. Rate: ', paste(rim_att))
+cat('Mid Att. Rate: ', paste(mid_att))
+cat('3pt Att. Rate: ', paste(three_att))
+```
+
